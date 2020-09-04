@@ -1,11 +1,6 @@
 use super::image_pull::ImagePull;
-use crate::{make_status, PodState};
-use kubelet::state::{State, Transition};
-use kubelet::{
-    pod::{Phase, Pod},
-    state,
-};
-
+use crate::PodState;
+use kubelet::state::prelude::*;
 state!(
     /// Kubelet encountered an error when pulling container image.
     ImagePullBackoff,
