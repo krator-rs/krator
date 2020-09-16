@@ -1,9 +1,8 @@
-use kubelet::pod::{Phase, Pod};
-use kubelet::state::{State, Transition};
+use kubelet::state::prelude::*;
 
 use super::crash_loop_backoff::CrashLoopBackoff;
 use super::registered::Registered;
-use crate::{make_status, PodState};
+use crate::PodState;
 
 #[derive(Default, Debug)]
 /// The Pod failed to run.

@@ -1,11 +1,7 @@
-use kubelet::state::{State, Transition};
-use kubelet::{
-    pod::{Phase, Pod},
-    state,
-};
+use kubelet::state::prelude::*;
 use log::error;
 
-use crate::{make_status, PodState};
+use crate::PodState;
 
 use super::image_pull_backoff::ImagePullBackoff;
 use super::volume_mount::VolumeMount;
