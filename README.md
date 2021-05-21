@@ -1,34 +1,27 @@
-# Krustlet: Kubernetes Kubelet in Rust for running WASM
+# Krator: Kubernetes Operators using State Machines
 
 :construction: :construction: **This project is highly experimental.**
 :construction: :construction: It should not be used in production workloads.
 
-Krustlet acts as a Kubelet by listening on the event stream for new pods that
-the scheduler assigns to it based on specific Kubernetes
-[tolerations](https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/).
-
-The default implementation of Krustlet listens for the architecture
-`wasm32-wasi` and schedules those workloads to run in a `wasmtime`-based runtime
-instead of a container runtime.
+Krator acts as an Operator by watching Kubernetes resources and running
+control loops to reconcile cluster state with desired state. Control loops are
+specified using a State Machine API pattern which improves reliability and
+reduces complexity. 
 
 ## Documentation
 
-If you're new to the project, get started with [the
-introduction](docs/intro/README.md). For more in-depth information about
-Krustlet, plunge right into the [topic guides](docs/topics/README.md).
+[API Documentation](https://docs.rs/krator)
 
-Looking for the developer guide? [Start here](docs/community/developers.md).
+## Examples
+
+[Moose Operator](crates/krator/examples)
 
 ## Community, discussion, contribution, and support
 
-You can reach the Krustlet community and developers via the following channels:
+You can reach the Krator community and developers via the following channels:
 
 - [Kubernetes Slack](https://kubernetes.slack.com):
   - [#krustlet](https://kubernetes.slack.com/messages/krustlet)
-- Public Community Call on Mondays at 1:00 PM PT:
-  - [Zoom](https://us04web.zoom.us/j/71695031152?pwd=T0g1d0JDZVdiMHpNNVF1blhxVC9qUT09)
-  - Download the meeting calendar invite
-    [here](https://raw.githubusercontent.com/deislabs/krustlet/master/docs/community/assets/community_meeting.ics)
 
 ## Code of Conduct
 
