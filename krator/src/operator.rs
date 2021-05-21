@@ -1,13 +1,24 @@
 use serde::Serialize;
 use std::fmt::Debug;
 
-use crate::manager::controller::Watchable;
 use crate::object::{ObjectState, ObjectStatus};
 use crate::state::{SharedState, State};
 use crate::Manifest;
+use kube::api::Resource;
 
 #[cfg(feature = "admission-webhook")]
 use crate::admission::AdmissionTls;
+
+/// Trait alias for types which can be watched.
+pub trait Watchable:
+    Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
+{
+}
+
+impl<T> Watchable for T where
+    T: Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
+{
+}
 
 #[async_trait::async_trait]
 /// Interface for creating an operator.

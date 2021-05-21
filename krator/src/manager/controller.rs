@@ -1,9 +1,9 @@
 use super::watch::{Watch, WatchHandle};
 #[cfg(feature = "admission-webhook")]
 use crate::admission::WebhookFn;
+use crate::operator::Watchable;
 use crate::Operator;
 use kube::api::ListParams;
-use kube::Resource;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
@@ -23,17 +23,6 @@ pub struct ControllerBuilder<C: Operator> {
     /// The buffer length for Tokio channels used to communicate between
     /// watcher tasks and runtime tasks.
     buffer: usize,
-}
-
-/// Trait alias for types which can be watched.
-pub trait Watchable:
-    Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
-{
-}
-
-impl<T> Watchable for T where
-    T: Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
-{
 }
 
 impl<O: Operator> ControllerBuilder<O> {
