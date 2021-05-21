@@ -76,6 +76,7 @@ impl<O: Operator> OperatorRuntime<O> {
         }
     }
 
+    #[cfg(not(feature = "admission-webhook"))]
     pub(crate) fn new_with_store(
         kubeconfig: &kube::Config,
         operator: O,
