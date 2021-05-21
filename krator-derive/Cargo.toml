@@ -1,26 +1,21 @@
 [package]
 name = "krator-derive"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
-    "Matt Butcher <matt.butcher@microsoft.com>",
-    "Matthew Fisher <matt.fisher@microsoft.com>",
-    "Radu Matei <radu.matei@microsoft.com>",
-    "Taylor Thomas <taylor.thomas@microsoft.com>",
-    "Brian Ketelsen <Brian.Ketelsen@microsoft.com>",
-    "Brian Hardock <Brian.Hardock@microsoft.com>",
-    "Ryan Levick <rylevick@microsoft.com>",
     "Kevin Flansburg <kevin.flansburg@gmail.com>",
+    "Taylor Thomas <taylor.thomas@microsoft.com>",
+    "Matthew Fisher <matt.fisher@microsoft.com>",
+    "Matt Butcher <matt.butcher@microsoft.com>",
 ]
 edition = "2018"
-license-file = "../../LICENSE"
+license-file = "../LICENSE"
 description = "Derive macros for the Krator crate"
-repository = "https://github.com/deislabs/krustlet"
+repository = "https://github.com/krator-rs/krator"
 readme = "README.md"
-keywords = ["wasm", "wasi", "webassembly", "kubernetes"]
+keywords = ["kubernetes", "controller", "operator", "derive"]
 
 [lib]
 proc-macro = true
-
 
 [dependencies]
 syn = "1.0"
