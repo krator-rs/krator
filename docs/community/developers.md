@@ -52,7 +52,7 @@ included in the Ubuntu distro in the Microsoft Store:
 $ sudo apt install build-essential libssl-dev pkg-config
 ```
 
-**NOTE:** We've had mixed success developing Krutorstlet on WSL. It has been
+**NOTE:** We've had mixed success developing Krator on WSL. It has been
 successfully run on WSL2 using the WSL2-enabled Docker Kubernetes or Azure
 Kubernetes. If you're on WSL1 you may be better off running in a full Linux VM
 under Hyper-V.
