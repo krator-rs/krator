@@ -12,6 +12,8 @@ reduces complexity.
 
 [API Documentation](https://docs.rs/krator)
 
+Looking for the developer guide? [Start here](docs/community/developers.md).
+
 ## Examples
 
 [Moose Operator](crates/krator/examples)
