@@ -23,6 +23,24 @@ We use `cargo` to build our programs:
 $ cargo build
 ```
 
+Krator is a library crate, meaning that you cannot run Krator
+directly, but must import it into other "binary" crates which can
+then be run. To see an example of using Krator in this way,
+check out the [moose example](/krator/examples/moose.rs).
+
+Krator does not configure `k8s-openapi` to use a specific version of
+Kubernetes. You will need to select a version and enable its feature
+when building your application:
+
+```
+[dependencies.k8s-openapi]
+version = "0.11"
+default-features = false
+features = ["v1_20"]
+```
+
+Krator is tested against Kubernetes v1.20. 
+
 ### Building without openssl
 
 If you are on a system that doesn't have OpenSSL (or has the incorrect version),
