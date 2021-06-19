@@ -6,18 +6,23 @@ on:
   pull_request: {}
 jobs:
   build_and_test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.config.os }}
     strategy:
       # report each failing OS/toolchain build - useful for separating between OS failures vs. toolchain (nightly) failures
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        config:
+          - os: ubuntu-latest
+            features: default
+          - os: macos-latest
+            features: default
+          - os: windows-latest
+            features: rustls-tls
         toolchain:
           - stable
-          - nightly
+        features:
+          - "derive"
+          - "derive-admission-webhook"
     steps:
       - uses: actions/checkout@v2
       - name: Install toolchain ${{ matrix.toolchain }}
@@ -30,7 +35,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --all-features
+          args: --release --no-default-features --features "${{ matrix.features }} ${{ matrix.config.features }}"
       - name: Test with toolchain ${{ matrix.toolchain }}
         uses: actions-rs/cargo@v1
         with:
@@ -50,4 +55,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --workspace
+          args: --workspace --no-default-features --features "${{ matrix.features }} ${{ matrix.config.features }}"
