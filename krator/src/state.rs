@@ -217,9 +217,14 @@ pub mod test {
     #[derive(Default, Debug)]
     /// Stub state machine for testing.
     pub struct Stub;
-    
+
     #[async_trait::async_trait]
-    impl<Resource: Send + Sync + Clone + std::marker::Unpin, Status: Default + 'static, ResourceState: ObjectState<Manifest = Resource, Status = Status>> State<ResourceState> for Stub {
+    impl<
+            Resource: Send + Sync + Clone + std::marker::Unpin,
+            Status: Default + 'static,
+            ResourceState: ObjectState<Manifest = Resource, Status = Status>,
+        > State<ResourceState> for Stub
+    {
         async fn next(
             self: Box<Self>,
             _shared_state: SharedState<ResourceState::SharedState>,
@@ -228,8 +233,12 @@ pub mod test {
         ) -> Transition<ResourceState> {
             Transition::Complete(Ok(()))
         }
-    
-        async fn status(&self, _state: &mut ResourceState, _pod: &Resource) -> anyhow::Result<Status> {
+
+        async fn status(
+            &self,
+            _state: &mut ResourceState,
+            _pod: &Resource,
+        ) -> anyhow::Result<Status> {
             Ok(Default::default())
         }
     }
