@@ -208,3 +208,38 @@ pub async fn patch_status<R: Resource + Clone + DeserializeOwned, S: ObjectStatu
         }
     }
 }
+
+/// Stubbed state types for constructing tests.
+pub mod test {
+    use super::*;
+    use crate::ObjectState;
+
+    #[derive(Default, Debug)]
+    /// Stub state machine for testing.
+    pub struct Stub;
+
+    #[async_trait::async_trait]
+    impl<
+            Resource: Send + Sync + Clone + std::marker::Unpin,
+            Status: Default + 'static,
+            ResourceState: ObjectState<Manifest = Resource, Status = Status>,
+        > State<ResourceState> for Stub
+    {
+        async fn next(
+            self: Box<Self>,
+            _shared_state: SharedState<ResourceState::SharedState>,
+            _pod_state: &mut ResourceState,
+            _pod: Manifest<Resource>,
+        ) -> Transition<ResourceState> {
+            Transition::Complete(Ok(()))
+        }
+
+        async fn status(
+            &self,
+            _state: &mut ResourceState,
+            _pod: &Resource,
+        ) -> anyhow::Result<Status> {
+            Ok(Default::default())
+        }
+    }
+}

@@ -1,0 +1,11 @@
+error[E0277]: the trait bound `NotState: krator::State<PodState>` is not satisfied
+  --> $DIR/next_must_be_state.rs:39:9
+   |
+39 |         Transition::next(self, NotState)
+   |         ^^^^^^^^^^^^^^^^ the trait `krator::State<PodState>` is not implemented for `NotState`
+   |
+   = note: required by `Transition::<S>::next`
+
+error: aborting due to previous error
+
+For more information about this error, try `rustc --explain E0277`.
