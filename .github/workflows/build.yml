@@ -40,12 +40,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --lib
+          args: --workspace --lib --no-default-features --features "${{ matrix.features }} ${{ matrix.config.features }}"
       - name: Test docs with toolchain ${{ matrix.toolchain }}
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --doc --all
+          args: --doc --all --no-default-features --features "${{ matrix.features }} ${{ matrix.config.features }}"
       - name: Check formatting
         uses: actions-rs/cargo@v1
         with:
