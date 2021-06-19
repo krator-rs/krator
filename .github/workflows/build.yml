@@ -5,6 +5,20 @@ on:
       - main
   pull_request: {}
 jobs:
+  ui_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+      - name: UI Test with toolchain stable
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --test ui --features "derive"
   build_and_test:
     runs-on: ${{ matrix.config.os }}
     strategy:
