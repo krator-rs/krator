@@ -1,5 +1,6 @@
 use krator::{Manifest, ObjectState, ObjectStatus, Operator, State, Transition, TransitionTo};
 use kube::api::{ListParams, Resource};
+use kube::CustomResourceExt;
 use kube_derive::CustomResource;
 use rand::seq::IteratorRandom;
 use rand::Rng;

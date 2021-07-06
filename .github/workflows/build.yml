@@ -55,6 +55,11 @@ jobs:
         with:
           command: test
           args: --workspace --lib --no-default-features --features "${{ matrix.features }} ${{ matrix.config.features }}"
+      - name: Test admission derive with toolchain ${{ matrix.toolchain }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --package krator-derive --test admission --features "admission-webhook"
       - name: Test docs with toolchain ${{ matrix.toolchain }}
         uses: actions-rs/cargo@v1
         with:
