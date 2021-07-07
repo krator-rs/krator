@@ -6,7 +6,7 @@
 Krator acts as an Operator by watching Kubernetes resources and running
 control loops to reconcile cluster state with desired state. Control loops are
 specified using a State Machine API pattern which improves reliability and
-reduces complexity. 
+reduces complexity.
 
 ## Documentation
 
