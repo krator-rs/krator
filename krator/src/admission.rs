@@ -31,6 +31,7 @@ use tracing_futures::Instrument;
 /// use krator::admission;
 /// use krator_derive::AdmissionWebhook;
 /// use kube::{Api, Client};
+/// use kube::CustomResourceExt;
 /// use kube_derive::CustomResource;
 /// use schemars::JsonSchema;
 /// use serde::{Deserialize, Serialize};

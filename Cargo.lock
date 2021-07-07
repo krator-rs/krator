@@ -918,9 +918,9 @@ dependencies = [
 
 [[package]]
 name = "kube"
-version = "0.58.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "161c4d92deb2f83f0086367e60c1ef3d5309d833769714e3bd0ec4c906e86a48"
+checksum = "21d3c79fb97a822a63ce9422f7302484748032c808954898ba248705e99ea110"
 dependencies = [
  "base64",
  "bytes",
@@ -986,9 +986,9 @@ dependencies = [
 
 [[package]]
 name = "kube-runtime"
-version = "0.58.0"
+version = "0.58.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d898a8ddb67aeac71ffebbad36845d9f3c46f2432bbfee7c8e43531d0ef9270e"
+checksum = "a4f034d330a0849e1603e285389e3f0ed93b9a86017d46e851c9e49e6d0b99e2"
 dependencies = [
  "dashmap",
  "derivative",

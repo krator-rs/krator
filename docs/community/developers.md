@@ -34,12 +34,12 @@ when building your application:
 
 ```
 [dependencies.k8s-openapi]
-version = "0.11"
+version = "0.12"
 default-features = false
-features = ["v1_20"]
+features = ["v1_21"]
 ```
 
-Krator is tested against Kubernetes v1.20. 
+Krator is tested against Kubernetes v1.21. 
 
 ### Building without openssl
 
