@@ -178,6 +178,7 @@ impl CustomDerive for CustomResourceInfos {
 
                 /// Returns the name of the admission webhook secret that will get created with `admission_webhook_secret()`
                 pub fn admission_webhook_secret_name() -> std::string::String {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
                     format!("{}-{}-admission-webhook-tls", crd.spec.names.plural, crd.spec.group).to_string().replace(".", "-")
                 }
@@ -185,6 +186,7 @@ impl CustomDerive for CustomResourceInfos {
                 /// Returns a Kubernetes secret of type `tls` that contains a certificate and a private key and
                 /// can be used for the admission webhook service
                 pub fn admission_webhook_secret(namespace: &str) -> k8s_openapi::api::core::v1::Secret {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
                     let service_name = #name_identifier::admission_webhook_service_name();
 
@@ -207,7 +209,7 @@ impl CustomDerive for CustomResourceInfos {
                             namespace: Some(namespace.to_string()),
                             ..Default::default()
                         },
-                        string_data: Some(data),
+                        string_data: data,
                         type_: Some("tls".to_string()),
                         ..Default::default()
                     }
@@ -222,12 +224,14 @@ impl CustomDerive for CustomResourceInfos {
                 /// Returns the selector value for the label `app` that the service created with `admission_webhook_service()`
                 /// uses for selecting the pods that serve the admission webhook
                 pub fn admission_webhook_service_app_selector() -> std::string::String {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
                     format!("{}-{}-operator", crd.spec.names.plural, crd.spec.group).to_string().replace(".", "-")
                 }
 
                 /// Returns the name of the admission webhook service that will get created with `admission_webhook_service()`
                 pub fn admission_webhook_service_name() -> std::string::String {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
                     format!("{}-{}-admission-webhook", crd.spec.names.plural, crd.spec.group).to_string().replace(".", "-")
                 }
@@ -236,6 +240,7 @@ impl CustomDerive for CustomResourceInfos {
                 /// `admission_webhook_service_app_selector()`. It exposes port `443` (necessary for webhooks) and
                 /// listens to the pod's port `8443`
                 pub fn admission_webhook_service(namespace: &str) -> k8s_openapi::api::core::v1::Service {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
 
                     let mut selector = std::collections::BTreeMap::new();
@@ -248,13 +253,13 @@ impl CustomDerive for CustomResourceInfos {
                             ..Default::default()
                         },
                         spec: Some(k8s_openapi::api::core::v1::ServiceSpec {
-                            selector: Some(selector),
-                            ports: Some(vec![k8s_openapi::api::core::v1::ServicePort{
+                            selector: selector,
+                            ports: vec![k8s_openapi::api::core::v1::ServicePort{
                                 protocol: Some("TCP".to_string()),
                                 port: 443,
                                 target_port: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8443)),
                                 ..Default::default()
-                            }]),
+                            }],
                             type_: Some("ClusterIP".to_string()),
                             ..Default::default()
                         }),
@@ -270,6 +275,7 @@ impl CustomDerive for CustomResourceInfos {
 
                 /// Returns the name of the admission webhook configuration that will get created with `admission_webhook_configuration()`
                 pub fn admission_webhook_configuration_name() -> std::string::String {
+                    use kube::CustomResourceExt;
                     let crd = #name_identifier::crd();
                     format!("{}.{}", crd.spec.names.plural, crd.spec.group).to_string()
                 }
@@ -278,6 +284,7 @@ impl CustomDerive for CustomResourceInfos {
                 /// Creates a MutatingWebhookConfiguration using the certificate from the given service and the service
                 /// of the given service as configuration
                 pub fn admission_webhook_configuration(service: k8s_openapi::api::core::v1::Service, secret: k8s_openapi::api::core::v1::Secret) -> Result<k8s_openapi::api::admissionregistration::v1::MutatingWebhookConfiguration, Box<dyn std::error::Error + Send + Sync>> {
+                   use kube::CustomResourceExt;
                    let crd = #name_identifier::crd();
 
                    let webhook_name = #name_identifier::admission_webhook_configuration_name() ;
@@ -293,20 +300,14 @@ impl CustomDerive for CustomResourceInfos {
 
                    const TLS_CRT: &'static str = "tls.crt";
 
-                   let ca_bundle = secret
-                       .string_data
-                       .as_ref()
-                       .and_then(|ref string_data| {
-                           string_data
-                               .get(TLS_CRT)
-                               .map(std::string::String::as_bytes)
-                               .map(std::vec::Vec::from)
-                               .map(k8s_openapi::ByteString)
-                       })
-                       .or(secret
-                           .data
-                           .as_ref()
-                           .and_then(|ref data| data.get(TLS_CRT).map(k8s_openapi::ByteString::to_owned)));
+                   let ca_bundle = secret.data
+                        .get(TLS_CRT)
+                        .map(|d| d.to_owned())
+                        .or_else(|| secret.string_data
+                            .get(TLS_CRT)
+                            .map(std::string::String::as_bytes)
+                            .map(std::vec::Vec::from)
+                            .map(k8s_openapi::ByteString));
 
 
                    if ca_bundle.is_none() { return Err(format!("secret with {} is does not contain data 'tls.crt'", secret.metadata.name.unwrap()).into())}
@@ -316,18 +317,18 @@ impl CustomDerive for CustomResourceInfos {
                            name: Some(webhook_name.clone()),
                            ..Default::default()
                        },
-                       webhooks: Some(vec![
+                       webhooks: vec![
                         k8s_openapi::api::admissionregistration::v1::MutatingWebhook{
                            admission_review_versions: versions.clone(),
-                           name: format!("{}", webhook_name.clone()),
+                           name: webhook_name,
                            side_effects: "None".to_string(),
-                           rules: Some(vec![k8s_openapi::api::admissionregistration::v1::RuleWithOperations{
-                               api_groups: Some(vec![crd.spec.group]),
-                               api_versions: Some(versions),
-                               operations: Some(vec!["*".to_string()]),
-                               resources: Some(vec![crd.spec.names.plural]),
-                               scope: Some(crd.spec.scope)
-                            }]),
+                           rules: vec![k8s_openapi::api::admissionregistration::v1::RuleWithOperations{
+                               api_groups: vec![crd.spec.group],
+                               api_versions: versions,
+                               operations: vec!["*".to_string()],
+                               resources: vec![crd.spec.names.plural],
+                               scope: Some(crd.spec.scope),
+                            }],
                            client_config: k8s_openapi::api::admissionregistration::v1::WebhookClientConfig{
                                ca_bundle: ca_bundle,
                                service: Some(k8s_openapi::api::admissionregistration::v1::ServiceReference{
@@ -340,7 +341,7 @@ impl CustomDerive for CustomResourceInfos {
                            },
                            ..Default::default()
                         }
-                      ])
+                      ]
                    })
                 }
             };
