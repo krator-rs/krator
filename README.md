@@ -36,3 +36,8 @@ For more information see the [Code of Conduct
 FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact
 [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional
 questions or comments.
+
+## Vulnerability Reporting
+
+For sensitive issues, please email one of the project maintainers. For
+other issues, please open an issue in this GitHub repository. 
