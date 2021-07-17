@@ -1,0 +1,19 @@
+name: License Scanning
+
+on:
+  - pull_request
+  - push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run FOSSA scan and upload build data
+        uses: fossa-contrib/fossa-action@v1
+        with:
+          # This is intended to be public (push-only)
+          fossa-api-key: f81ddfec60c1e6ff73e9035e467792cb
