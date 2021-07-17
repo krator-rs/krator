@@ -1,5 +1,7 @@
 # Krator: Kubernetes Operators using State Machines
 
+[![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/5066/badge)](https://bestpractices.coreinfrastructure.org/projects/5066)
+
 :construction: :construction: **This project is highly experimental.**
 :construction: :construction: It should not be used in production workloads.
 
