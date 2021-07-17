@@ -23,7 +23,7 @@ Looking for the developer guide? [Start here](docs/community/developers.md).
 You can reach the Krator community and developers via the following channels:
 
 - [Kubernetes Slack](https://kubernetes.slack.com):
-  - [#krustlet](https://kubernetes.slack.com/messages/krustlet)
+  - [#krator](https://kubernetes.slack.com/messages/krator)
 
 ## Code of Conduct
 
