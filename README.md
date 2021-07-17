@@ -1,4 +1,6 @@
 # Krator: Kubernetes Operators using State Machines
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkrator-rs%2Fkrator.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkrator-rs%2Fkrator?ref=badge_shield)
+
 
 :construction: :construction: **This project is highly experimental.**
 :construction: :construction: It should not be used in production workloads.
@@ -34,3 +36,7 @@ For more information see the [Code of Conduct
 FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact
 [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional
 questions or comments.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fkrator-rs%2Fkrator.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fkrator-rs%2Fkrator?ref=badge_large)
