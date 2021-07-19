@@ -1,6 +1,6 @@
 [package]
 name = "krator-derive"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
     "Kevin Flansburg <kevin.flansburg@gmail.com>",
     "Taylor Thomas <taylor.thomas@microsoft.com>",
