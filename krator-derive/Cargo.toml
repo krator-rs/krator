@@ -8,7 +8,7 @@ authors = [
     "Matt Butcher <matt.butcher@microsoft.com>",
 ]
 edition = "2018"
-license-file = "../LICENSE"
+license = "Apache-2.0"
 description = "Derive macros for the Krator crate"
 repository = "https://github.com/krator-rs/krator"
 readme = "README.md"
