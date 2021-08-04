@@ -141,7 +141,7 @@ where
         .await
     {
         Ok(status) => {
-            patch_status(&api, &name, status).await;
+            patch_status(api, name, status).await;
         }
         Err(error) => {
             warn!(?error, "Object status patch returned error.",);
@@ -170,7 +170,7 @@ where
             Err(error) => {
                 error!(?error, "Object state machine exited with error.",);
                 let status = S::Status::failed(&format!("{:?}", error));
-                patch_status(&api, &name, status).await;
+                patch_status(api, name, status).await;
                 None
             }
         },
@@ -192,7 +192,7 @@ pub async fn patch_status<R: Resource + Clone + DeserializeOwned, S: ObjectStatu
     );
     match api
         .patch_status(
-            &name,
+            name,
             &PatchParams::default(),
             &kube::api::Patch::Merge(patch),
         )
