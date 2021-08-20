@@ -397,6 +397,11 @@ struct Opt {
     /// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#jaeger-exporter
     #[structopt(long)]
     jaeger: bool,
+
+    /// Enable Tokio Console,
+    #[structopt(long)]
+    console: bool,
+
     /// Configure logger to emit JSON output.
     #[structopt(long)]
     json: bool,
@@ -434,6 +439,13 @@ fn init_logger(opt: &Opt) -> anyhow::Result<Option<opentelemetry_jaeger::Uninsta
             let subscriber = subscriber.with(telemetry);
             tracing::subscriber::set_global_default(subscriber)?;
             Some(_uninstall)
+        } else if opt.console {
+             use tracing_subscriber::layer::SubscriberExt;
+             let (layer, server) = console_subscriber::TasksLayer::new();
+             let subscriber = subscriber.with(layer);
+             tokio::spawn(server.serve());
+             tracing::subscriber::set_global_default(subscriber)?;
+             None
         } else {
             tracing::subscriber::set_global_default(subscriber)?;
             None
@@ -453,6 +465,13 @@ fn init_logger(opt: &Opt) -> anyhow::Result<Option<opentelemetry_jaeger::Uninsta
             let subscriber = subscriber.with(telemetry);
             tracing::subscriber::set_global_default(subscriber)?;
             Some(_uninstall)
+        } else if opt.console {
+             use tracing_subscriber::layer::SubscriberExt;
+             let (layer, server) = console_subscriber::TasksLayer::new();
+             let subscriber = subscriber.with(layer);
+             tokio::spawn(server.serve());
+             tracing::subscriber::set_global_default(subscriber)?;
+             None
         } else {
             tracing::subscriber::set_global_default(subscriber)?;
             None
