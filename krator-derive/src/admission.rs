@@ -82,7 +82,7 @@ impl Parse for Features {
 }
 
 fn get_features(attrs: &[Attribute]) -> Features {
-    attrs.iter().fold(Features::default(), |mut acc, ref attr| {
+    attrs.iter().fold(Features::default(), |mut acc, attr| {
         if let Some(features) = parse_as_features_attr(attr) {
             acc.secret |= features.secret;
             acc.service |= features.service;

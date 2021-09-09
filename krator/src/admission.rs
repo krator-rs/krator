@@ -183,7 +183,7 @@ impl WebhookResources {
             let api: kube::Api<Secret> = kube::Api::namespaced(client.to_owned(), secret_namespace);
             let name = self.secret().metadata.name.as_ref().unwrap();
             api.patch(
-                &name,
+                name,
                 &PatchParams {
                     dry_run: false,
                     force: true,
@@ -199,7 +199,7 @@ impl WebhookResources {
                 kube::Api::namespaced(client.to_owned(), service_namespace);
             let name = self.service().metadata.name.as_ref().unwrap();
             api.patch(
-                &name,
+                name,
                 &PatchParams {
                     dry_run: false,
                     force: true,
@@ -214,7 +214,7 @@ impl WebhookResources {
             let api: kube::Api<MutatingWebhookConfiguration> = kube::Api::all(client.to_owned());
             let name = self.webhook_config().metadata.name.as_ref().unwrap();
             api.patch(
-                &name,
+                name,
                 &PatchParams {
                     dry_run: false,
                     force: true,
