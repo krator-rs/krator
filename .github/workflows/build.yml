@@ -25,7 +25,7 @@ jobs:
       - name: Install toolchain stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: nightly
           default: true
       - name: UI Test with toolchain stable
         uses: actions-rs/cargo@v1

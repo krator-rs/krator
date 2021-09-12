@@ -22,6 +22,7 @@ fn compile_test() {
     let mut config = compiletest_rs::Config {
         mode: compiletest_rs::common::Mode::Ui,
         src_base: PathBuf::from("tests/ui"),
+        target_rustcflags: Some(" -Z ui-testing ".to_string()),
         ..Default::default()
     };
     link_deps(&mut config);
