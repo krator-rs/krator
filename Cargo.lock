@@ -820,7 +820,7 @@ dependencies = [
 
 [[package]]
 name = "krator"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -852,7 +852,7 @@ dependencies = [
 
 [[package]]
 name = "krator-derive"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "k8s-openapi",
