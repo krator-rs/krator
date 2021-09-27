@@ -209,7 +209,7 @@ impl CustomDerive for CustomResourceInfos {
                             namespace: Some(namespace.to_string()),
                             ..Default::default()
                         },
-                        string_data: data,
+                        string_data: Some(data),
                         type_: Some("tls".to_string()),
                         ..Default::default()
                     }
@@ -253,13 +253,13 @@ impl CustomDerive for CustomResourceInfos {
                             ..Default::default()
                         },
                         spec: Some(k8s_openapi::api::core::v1::ServiceSpec {
-                            selector: selector,
-                            ports: vec![k8s_openapi::api::core::v1::ServicePort{
+                            selector: Some(selector),
+                            ports: Some(vec![k8s_openapi::api::core::v1::ServicePort{
                                 protocol: Some("TCP".to_string()),
                                 port: 443,
                                 target_port: Some(k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(8443)),
                                 ..Default::default()
-                            }],
+                            }]),
                             type_: Some("ClusterIP".to_string()),
                             ..Default::default()
                         }),
@@ -300,14 +300,20 @@ impl CustomDerive for CustomResourceInfos {
 
                    const TLS_CRT: &'static str = "tls.crt";
 
-                   let ca_bundle = secret.data
-                        .get(TLS_CRT)
-                        .map(|d| d.to_owned())
-                        .or_else(|| secret.string_data
-                            .get(TLS_CRT)
-                            .map(std::string::String::as_bytes)
-                            .map(std::vec::Vec::from)
-                            .map(k8s_openapi::ByteString));
+                   let ca_bundle = secret
+                       .string_data
+                       .as_ref()
+                       .and_then(|ref string_data| {
+                           string_data
+                               .get(TLS_CRT)
+                               .map(std::string::String::as_bytes)
+                               .map(std::vec::Vec::from)
+                               .map(k8s_openapi::ByteString)
+                       })
+                       .or(secret
+                           .data
+                           .as_ref()
+                           .and_then(|ref data| data.get(TLS_CRT).map(k8s_openapi::ByteString::to_owned)));
 
 
                    if ca_bundle.is_none() { return Err(format!("secret with {} is does not contain data 'tls.crt'", secret.metadata.name.unwrap()).into())}
@@ -317,18 +323,18 @@ impl CustomDerive for CustomResourceInfos {
                            name: Some(webhook_name.clone()),
                            ..Default::default()
                        },
-                       webhooks: vec![
+                       webhooks: Some(vec![
                         k8s_openapi::api::admissionregistration::v1::MutatingWebhook{
                            admission_review_versions: versions.clone(),
-                           name: webhook_name,
+                           name: format!("{}", webhook_name.clone()),
                            side_effects: "None".to_string(),
-                           rules: vec![k8s_openapi::api::admissionregistration::v1::RuleWithOperations{
-                               api_groups: vec![crd.spec.group],
-                               api_versions: versions,
-                               operations: vec!["*".to_string()],
-                               resources: vec![crd.spec.names.plural],
-                               scope: Some(crd.spec.scope),
-                            }],
+                           rules: Some(vec![k8s_openapi::api::admissionregistration::v1::RuleWithOperations{
+                               api_groups: Some(vec![crd.spec.group]),
+                               api_versions: Some(versions),
+                               operations: Some(vec!["*".to_string()]),
+                               resources: Some(vec![crd.spec.names.plural]),
+                               scope: Some(crd.spec.scope)
+                            }]),
                            client_config: k8s_openapi::api::admissionregistration::v1::WebhookClientConfig{
                                ca_bundle: ca_bundle,
                                service: Some(k8s_openapi::api::admissionregistration::v1::ServiceReference{
@@ -341,7 +347,7 @@ impl CustomDerive for CustomResourceInfos {
                            },
                            ..Default::default()
                         }
-                      ]
+                      ])
                    })
                 }
             };

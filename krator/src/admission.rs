@@ -1,7 +1,7 @@
 //! Basic implementation of Kubernetes Admission API
 use crate::ObjectState;
 use crate::Operator;
-use anyhow::{ensure, Context};
+use anyhow::{bail, ensure, Context};
 use k8s_openapi::{
     api::{
         admissionregistration::v1::MutatingWebhookConfiguration,
@@ -110,14 +110,14 @@ impl WebhookResources {
     {
         let metadata = owner.metadata();
 
-        let owner_references = vec![OwnerReference {
+        let owner_references = Some(vec![OwnerReference {
             api_version: k8s_openapi::api_version(owner).to_string(),
             controller: Some(true),
             kind: k8s_openapi::kind(owner).to_string(),
             name: metadata.name.clone().unwrap(),
             uid: metadata.uid.clone().unwrap(),
             ..Default::default()
-        }];
+        }]);
 
         let mut secret = self.secret().to_owned();
         secret.metadata.owner_references = owner_references.clone();
@@ -252,7 +252,7 @@ impl Display for WebhookResources {
 # the webhook configuration
 {}
 "#,
-            service.spec.clone().unwrap().selector,
+            service.spec.clone().unwrap().selector.unwrap(),
             service.metadata.namespace.as_ref().unwrap(),
             serde_yaml::to_string(self.service()).unwrap(),
             serde_yaml::to_string(self.secret()).unwrap(),
@@ -271,7 +271,8 @@ pub struct AdmissionTls {
 }
 
 impl AdmissionTls {
-    /// Convenience function to extract secret data from a Kubernetes secret of type `tls`.
+    /// Convenience function to extract secret data from a Kubernetes secret of type `tls`. It supports
+    /// Secrets that have secrets set via `data` or `string_data`
     pub fn from(s: &Secret) -> anyhow::Result<Self> {
         ensure!(
             s.type_.as_ref().unwrap() == "tls",
@@ -291,16 +292,31 @@ impl AdmissionTls {
         const TLS_CRT: &str = "tls.crt";
         const TLS_KEY: &str = "tls.key";
 
-        // We only can get data from the `data` field. `string_data` is a write-only input field for
-        // convenience according to the API docs
+        if let Some(data) = &s.data {
+            let cert_byte_string = data.get(TLS_CRT).context(error_msg(TLS_CRT))?;
+            let key_byte_string = data.get(TLS_KEY).context(error_msg(TLS_KEY))?;
 
-        let cert_byte_string = s.data.get(TLS_CRT).context(error_msg(TLS_CRT))?;
-        let key_byte_string = s.data.get(TLS_KEY).context(error_msg(TLS_KEY))?;
+            return Ok(AdmissionTls {
+                cert: std::str::from_utf8(&cert_byte_string.0)?.to_string(),
+                private_key: std::str::from_utf8(&key_byte_string.0)?.to_string(),
+            });
+        }
 
-        return Ok(AdmissionTls {
-            cert: std::str::from_utf8(&cert_byte_string.0)?.to_string(),
-            private_key: std::str::from_utf8(&key_byte_string.0)?.to_string(),
-        });
+        if let Some(string_data) = &s.string_data {
+            let cert = string_data.get(TLS_CRT).context(error_msg(TLS_CRT))?;
+            let key = string_data.get(TLS_KEY).context(error_msg(TLS_KEY))?;
+
+            return Ok(AdmissionTls {
+                cert: cert.to_string(),
+                private_key: key.to_string(),
+            });
+        }
+
+        bail!(
+            "secret {}/{} does not contain any data",
+            metadata.name.as_ref().unwrap_or(&"".to_string()),
+            metadata.namespace.as_ref().unwrap_or(&"".to_string())
+        )
     }
 }
 

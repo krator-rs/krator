@@ -26,7 +26,7 @@ pub struct CrSpec {
 #[test]
 fn it_has_a_function_for_creating_admission_webhook_tls_secret() {
     let secret: k8s_openapi::api::core::v1::Secret = MyCr::admission_webhook_secret("default");
-    let data = secret.string_data;
+    let data = secret.string_data.unwrap();
     assert_eq!(
         secret.metadata.name.unwrap(),
         "mycrs-example-com-admission-webhook-tls".to_string()
@@ -51,7 +51,7 @@ fn it_has_a_function_for_creating_admission_webhook_service() {
     );
 
     let spec = service.spec.unwrap();
-    let selector = &spec.selector;
+    let selector = &spec.selector.unwrap();
     assert_eq!(selector.get("app").unwrap(), "mycrs-example-com-operator");
 }
 
@@ -62,21 +62,24 @@ fn it_has_a_function_for_creating_admission_webhook_configuration() {
     let admission_webhook_configuration: MutatingWebhookConfiguration =
         MyCr::admission_webhook_configuration(service, secret).unwrap();
 
-    let webhook = &admission_webhook_configuration.webhooks[0];
+    let webhook = &admission_webhook_configuration.webhooks.unwrap()[0];
     let client_config = &webhook.client_config.clone();
     let service = client_config.service.clone().unwrap();
 
-    let rule = &webhook.rules[0];
+    let rule = &webhook.rules.clone().unwrap()[0];
     assert_eq!(
         admission_webhook_configuration.metadata.name.unwrap(),
         "mycrs.example.com".to_string()
     );
     assert_eq!(webhook.admission_review_versions, vec!["v1"]);
     assert_eq!(webhook.side_effects, "None");
-    assert_eq!(rule.api_groups, vec!["example.com".to_string()]);
-    assert_eq!(rule.api_versions, vec!["v1".to_string()]);
-    assert_eq!(rule.operations, vec!["*".to_string()]);
-    assert_eq!(rule.resources, vec!["mycrs".to_string()]);
+    assert_eq!(
+        rule.api_groups.clone().unwrap(),
+        vec!["example.com".to_string()]
+    );
+    assert_eq!(rule.api_versions.clone().unwrap(), vec!["v1".to_string()]);
+    assert_eq!(rule.operations.clone().unwrap(), vec!["*".to_string()]);
+    assert_eq!(rule.resources.clone().unwrap(), vec!["mycrs".to_string()]);
     assert_eq!(rule.scope.clone().unwrap(), "Cluster".to_string());
 
     assert_eq!(client_config.url, None);

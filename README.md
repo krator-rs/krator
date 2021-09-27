@@ -40,4 +40,4 @@ questions or comments.
 ## Vulnerability Reporting
 
 For sensitive issues, please email one of the project maintainers. For
-other issues, please open an issue in this GitHub repository. 
+other issues, please open an issue in this GitHub repository.

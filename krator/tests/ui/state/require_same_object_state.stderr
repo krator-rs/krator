@@ -1,8 +1,10 @@
 error[E0277]: the trait bound `OtherState: krator::State<PodState>` is not satisfied
-  --> $DIR/require_same_object_state.rs:50:9
+  --> $DIR/require_same_object_state.rs:50:32
    |
 LL |         Transition::next(self, OtherState)
-   |         ^^^^^^^^^^^^^^^^ the trait `krator::State<PodState>` is not implemented for `OtherState`
+   |         ----------------       ^^^^^^^^^^ the trait `krator::State<PodState>` is not implemented for `OtherState`
+   |         |
+   |         required by a bound introduced by this call
    |
    = help: the following implementations were found:
              <OtherState as krator::State<OtherPodState>>
