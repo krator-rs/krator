@@ -200,9 +200,8 @@ dependencies = [
 
 [[package]]
 name = "compiletest_rs"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0086d6ad78cf409c3061618cd98e2789d5c9ce598fc9651611cf62eae0a599cb"
+version = "0.7.0"
+source = "git+https://github.com/kflansburg/compiletest-rs.git#1fed0133bef7066447622840f66c257e0502f436"
 dependencies = [
  "diff",
  "filetime",
