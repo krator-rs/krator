@@ -18,7 +18,7 @@ Looking for the developer guide? [Start here](docs/community/developers.md).
 
 ## Examples
 
-[Moose Operator](crates/krator/examples)
+[Moose Operator](krator/examples)
 
 ## Community, discussion, contribution, and support
 
