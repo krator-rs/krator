@@ -352,25 +352,25 @@ impl Operator for MooseTracker {
         Arc::clone(&self.shared)
     }
 
-    #[cfg(feature = "admission-webhook")]
-    async fn admission_hook(
-        &self,
-        manifest: Self::Manifest,
-    ) -> krator::admission::AdmissionResult<Self::Manifest> {
-        use k8s_openapi::apimachinery::pkg::apis::meta::v1::Status;
-        // All moose names start with "M"
-        let name = manifest.meta().name.clone().unwrap();
-        info!("Processing admission hook for moose named {}", name);
-        match name.chars().next() {
-            Some('m') | Some('M') => krator::admission::AdmissionResult::Allow(manifest),
-            _ => krator::admission::AdmissionResult::Deny(Status {
-                code: Some(400),
-                message: Some("Mooses may only have names starting with 'M'.".to_string()),
-                status: Some("Failure".to_string()),
-                ..Default::default()
-            }),
-        }
-    }
+    // #[cfg(feature = "admission-webhook")]
+    // async fn admission_hook(
+    //     &self,
+    //     manifest: Self::Manifest,
+    // ) -> krator::admission::AdmissionResult<Self::Manifest> {
+    //     use k8s_openapi::apimachinery::pkg::apis::meta::v1::Status;
+    //     // All moose names start with "M"
+    //     let name = manifest.meta().name.clone().unwrap();
+    //     info!("Processing admission hook for moose named {}", name);
+    //     match name.chars().next() {
+    //         Some('m') | Some('M') => krator::admission::AdmissionResult::Allow(manifest),
+    //         _ => krator::admission::AdmissionResult::Deny(Status {
+    //             code: Some(400),
+    //             message: Some("Mooses may only have names starting with 'M'.".to_string()),
+    //             status: Some("Failure".to_string()),
+    //             ..Default::default()
+    //         }),
+    //     }
+    // }
 
     #[cfg(feature = "admission-webhook")]
     async fn admission_hook_tls(&self) -> anyhow::Result<krator::admission::AdmissionTls> {
@@ -383,6 +383,26 @@ impl Operator for MooseTracker {
             .await?;
 
         Ok(admission::AdmissionTls::from(&secret)?)
+    }
+}
+
+#[cfg(feature = "admission-webhook")]
+fn admission_hook(
+    manifest: Moose,
+    _shared: &SharedMooseState,
+) -> krator::admission::AdmissionResult<Moose> {
+    use k8s_openapi::apimachinery::pkg::apis::meta::v1::Status;
+    // All moose names start with "M"
+    let name = manifest.meta().name.clone().unwrap();
+    info!("Processing admission hook for moose named {}", name);
+    match name.chars().next() {
+        Some('m') | Some('M') => krator::admission::AdmissionResult::Allow(manifest),
+        _ => krator::admission::AdmissionResult::Deny(Status {
+            code: Some(400),
+            message: Some("Mooses may only have names starting with 'M'.".to_string()),
+            status: Some("Failure".to_string()),
+            ..Default::default()
+        }),
     }
 }
 
@@ -528,20 +548,16 @@ Running moose example. Try to install some of the manifests provided in examples
     "#
     );
 
-    // New API does not currently support Webhooks, so use legacy API if enabled.
-    #[cfg(feature = "admission-webhook")]
-    {
-        use krator::OperatorRuntime;
-        let mut runtime = OperatorRuntime::new(&kubeconfig, tracker, Some(params));
-        runtime.start().await;
-    }
-    #[cfg(not(feature = "admission-webhook"))]
-    {
-        use krator::{ControllerBuilder, Manager};
-        let mut manager = Manager::new(&kubeconfig);
-        let controller = ControllerBuilder::new(tracker).with_params(params);
-        manager.register_controller(controller);
-        manager.start().await;
-    }
+    use krator::{ControllerBuilder, Manager};
+    let mut manager = Manager::new(&kubeconfig);
+    let controller = if cfg!(admission_webhook) {
+        ControllerBuilder::new(tracker)
+            .with_params(params)
+            .with_webhook(admission_hook)
+    } else {
+        ControllerBuilder::new(tracker).with_params(params)
+    };
+    manager.register_controller(controller);
+    manager.start().await;
     Ok(())
 }

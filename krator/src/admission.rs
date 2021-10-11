@@ -20,7 +20,6 @@ use std::{
     sync::Arc,
 };
 use tracing::{info, trace, warn};
-use tracing_futures::Instrument;
 
 /// WebhookResources encapsulates Kubernetes resources necessary to register the admission webhook.
 /// and provides some convenience functions
@@ -321,9 +320,9 @@ impl AdmissionTls {
 }
 
 /// Type signature for validating or mutating webhooks.
-pub type WebhookFn<C> = dyn Fn(
+pub type WebhookFn<C> = fn(
     <C as Operator>::Manifest,
-    <<C as Operator>::ObjectState as ObjectState>::SharedState,
+    &<<C as Operator>::ObjectState as ObjectState>::SharedState,
 ) -> AdmissionResult<<C as Operator>::Manifest>;
 
 /// Result of admission hook.
@@ -443,7 +442,7 @@ struct AdmissionReviewResponse {
 
 #[tracing::instrument(
     level="debug",
-    skip(operator, request),
+    skip(operator, request, hook),
     fields(
         name=%request.request.name(),
         namespace=?request.request.namespace(),
@@ -455,7 +454,8 @@ struct AdmissionReviewResponse {
 async fn review<O: Operator>(
     operator: Arc<O>,
     request: AdmissionReviewRequest<O::Manifest>,
-) -> warp::reply::Json {
+    hook: &WebhookFn<O>,
+) -> warp::reply::WithStatus<warp::reply::Json> {
     let manifest = match request.request.operation {
         AdmissionRequestOperation::Create { object, .. } => object,
         AdmissionRequestOperation::Update {
@@ -478,12 +478,14 @@ async fn review<O: Operator>(
     let name = manifest.name();
     let namespace = manifest.namespace();
 
-    let span = tracing::debug_span!("Operator::admission_hook",);
+    // let span = tracing::debug_span!("hook",);
 
-    let result = operator
-        .admission_hook(manifest.clone())
-        .instrument(span)
-        .await;
+    let shared = operator.shared_state().await;
+
+    let result = {
+        let shared = shared.read().await;
+        hook(manifest.clone(), &*shared)
+    };
 
     let response = match result {
         AdmissionResult::Allow(new_manifest) => {
@@ -530,35 +532,60 @@ async fn review<O: Operator>(
             }
         }
     };
-    warp::reply::json(&AdmissionReviewResponse {
-        api_version: request.api_version,
-        kind: request.kind,
-        response,
-    })
+    warp::reply::with_status(
+        warp::reply::json(&AdmissionReviewResponse {
+            api_version: request.api_version,
+            kind: request.kind,
+            response,
+        }),
+        warp::http::StatusCode::OK,
+    )
 }
 
-pub(crate) async fn endpoint<O: Operator>(operator: Arc<O>) {
-    let tls = operator
-        .admission_hook_tls()
-        .await
-        .expect("getting webhook tls AdmissionTls failed");
-
+use warp::Rejection;
+pub(crate) fn create_endpoint<O: Operator>(
+    operator: Arc<O>,
+    path: String,
+    f: WebhookFn<O>,
+) -> impl warp::Filter<Extract = (warp::reply::WithStatus<warp::reply::Json>,), Error = Rejection> + Clone
+{
     use warp::Filter;
-    let routes = warp::any()
+    warp::path(path)
+        .and(warp::path::end())
         .and(warp::post())
         .and(warp::body::json())
         .and_then(move |request: AdmissionReviewRequest<O::Manifest>| {
             let operator = Arc::clone(&operator);
             async move {
-                let response = review(operator, request).await;
+                let response = review(operator, request, &f).await;
                 Ok::<_, std::convert::Infallible>(response)
             }
-        });
+        })
+}
 
-    warp::serve(routes)
-        .tls()
-        .cert(tls.cert)
-        .key(tls.private_key)
-        .run(([0, 0, 0, 0], 8443))
-        .await;
+pub(crate) async fn endpoint<O: Operator>(_operator: Arc<O>) {
+    todo!()
+    // let tls = operator
+    //     .admission_hook_tls()
+    //     .await
+    //     .expect("getting webhook tls AdmissionTls failed");
+
+    // use warp::Filter;
+    // let routes = warp::any()
+    //     .and(warp::post())
+    //     .and(warp::body::json())
+    //     .and_then(move |request: AdmissionReviewRequest<O::Manifest>| {
+    //         let operator = Arc::clone(&operator);
+    //         async move {
+    //             let response = review(operator, request).await;
+    //             Ok::<_, std::convert::Infallible>(response)
+    //         }
+    //     });
+
+    // warp::serve(routes)
+    //     .tls()
+    //     .cert(tls.cert)
+    //     .key(tls.private_key)
+    //     .run(([0, 0, 0, 0], 8443))
+    //     .await;
 }

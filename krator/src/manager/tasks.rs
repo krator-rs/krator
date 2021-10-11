@@ -4,9 +4,9 @@
 use std::future::Future;
 
 use futures::FutureExt;
-
 use kube::{api::ApiResource, api::GroupVersionKind, Resource};
 use kube_runtime::watcher::Event;
+use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -64,7 +64,7 @@ pub(crate) async fn launch_watcher(client: kube::Client, handle: WatchHandle) {
 /// concrete `Event<O::Manifest>`.
 async fn launch_runtime<O: Operator>(
     kubeconfig: kube::Config,
-    controller: O,
+    controller: Arc<O>,
     mut rx: tokio::sync::mpsc::Receiver<DynamicEvent>,
     store: Store,
 ) {
@@ -197,15 +197,16 @@ pub(crate) fn controller_tasks<C: Operator>(
     kubeconfig: kube::Config,
     controller: ControllerBuilder<C>,
     store: Store,
-) -> (Controller, Vec<OperatorTask>) {
+) -> (Arc<C>, Controller, Vec<OperatorTask>) {
     let mut watches = Vec::new();
     let mut owns = Vec::new();
     let mut tasks = Vec::new();
     let buffer = controller.buffer();
+    let (manages, rx) = controller.manages().handle(buffer);
+    let operator = Arc::new(controller.controller);
 
     // Create main Operator task.
-    let (manages, rx) = controller.manages().handle(buffer);
-    let task = launch_runtime(kubeconfig, controller.controller, rx, store.clone()).boxed();
+    let task = launch_runtime(kubeconfig, Arc::clone(&operator), rx, store.clone()).boxed();
     tasks.push(task);
 
     for watch in controller.watches {
@@ -223,6 +224,7 @@ pub(crate) fn controller_tasks<C: Operator>(
     }
 
     (
+        operator,
         Controller {
             manages,
             owns,

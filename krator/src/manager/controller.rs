@@ -4,6 +4,8 @@ use crate::admission::WebhookFn;
 use crate::operator::Watchable;
 use crate::Operator;
 use kube::api::ListParams;
+use kube::Resource;
+use std::collections::BTreeMap;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
@@ -23,6 +25,8 @@ pub struct ControllerBuilder<C: Operator> {
     /// The buffer length for Tokio channels used to communicate between
     /// watcher tasks and runtime tasks.
     buffer: usize,
+    /// Registered webhooks.
+    pub(crate) webhooks: BTreeMap<String, WebhookFn<C>>,
 }
 
 impl<O: Operator> ControllerBuilder<O> {
@@ -35,6 +39,7 @@ impl<O: Operator> ControllerBuilder<O> {
             namespace: None,
             list_params: Default::default(),
             buffer: 32,
+            webhooks: BTreeMap::new(),
         }
     }
 
@@ -165,30 +170,25 @@ impl<O: Operator> ControllerBuilder<O> {
         self
     }
 
-    /// Registers a validating webhook at the path "/$GROUP/$VERSION/$KIND".
+    /// Registers a webhook at the path "/$GROUP/$VERSION/$KIND".
     /// Multiple webhooks can be registered, but must be at different paths.
     #[cfg(feature = "admission-webhook")]
-    pub(crate) fn validates(self, _f: &WebhookFn<O>) -> Self {
-        todo!()
+    pub fn with_webhook(mut self, f: WebhookFn<O>) -> Self {
+        let path = format!(
+            "/{}/{}/{}",
+            O::Manifest::group(&()),
+            O::Manifest::version(&()),
+            O::Manifest::kind(&())
+        );
+        self.webhooks.insert(path, f);
+        self
     }
 
-    /// Registers a validating webhook at the supplied path.
+    /// Registers a webhook at the supplied path.
     #[cfg(feature = "admission-webhook")]
-    pub(crate) fn validates_at_path(self, _path: &str, _f: &WebhookFn<O>) -> Self {
-        todo!()
-    }
-
-    /// Registers a mutating webhook at the path "/$GROUP/$VERSION/$KIND".
-    /// Multiple webhooks can be registered, but must be at different paths.
-    #[cfg(feature = "admission-webhook")]
-    pub(crate) fn mutates(self, _f: &WebhookFn<O>) -> Self {
-        todo!()
-    }
-
-    /// Registers a mutating webhook at the supplied path.
-    #[cfg(feature = "admission-webhook")]
-    pub(crate) fn mutates_at_path(self, _path: &str, _f: &WebhookFn<O>) -> Self {
-        todo!()
+    pub fn with_webhook_at_path(mut self, path: &str, f: WebhookFn<O>) -> Self {
+        self.webhooks.insert(path.to_string(), f);
+        self
     }
 }
 

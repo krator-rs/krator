@@ -76,10 +76,9 @@ impl<O: Operator> OperatorRuntime<O> {
         }
     }
 
-    #[cfg(not(feature = "admission-webhook"))]
     pub(crate) fn new_with_store(
         kubeconfig: &kube::Config,
-        operator: O,
+        operator: Arc<O>,
         params: Option<ListParams>,
         store: Store,
     ) -> Self {
@@ -89,7 +88,7 @@ impl<O: Operator> OperatorRuntime<O> {
         OperatorRuntime {
             client,
             handlers: HashMap::new(),
-            operator: Arc::new(operator),
+            operator,
             list_params,
             signal: None,
             store,
