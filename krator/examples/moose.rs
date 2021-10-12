@@ -356,7 +356,7 @@ impl Operator for MooseTracker {
     async fn admission_hook(
         &self,
         manifest: Self::Manifest,
-    ) -> crate::admission::AdmissionResult<Self::Manifest> {
+    ) -> krator::admission::AdmissionResult<Self::Manifest> {
         use k8s_openapi::apimachinery::pkg::apis::meta::v1::Status;
         // All moose names start with "M"
         let name = manifest.meta().name.clone().unwrap();
