@@ -1,20 +1,12 @@
 use super::watch::{Watch, WatchHandle};
 #[cfg(feature = "admission-webhook")]
-use crate::admission::create_boxed_endpoint;
-#[cfg(feature = "admission-webhook")]
-use crate::admission::AdmissionResult;
+use crate::admission::{create_boxed_endpoint, GenericAsyncFn, GenericFuture};
 use crate::operator::Watchable;
-#[cfg(feature = "admission-webhook")]
-use crate::ObjectState;
 use crate::Operator;
 use kube::api::ListParams;
 #[cfg(feature = "admission-webhook")]
-use kube::Resource;
-#[cfg(feature = "admission-webhook")]
 use std::collections::BTreeMap;
 use std::sync::Arc;
-#[cfg(feature = "admission-webhook")]
-use tokio::sync::RwLock;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
@@ -39,19 +31,6 @@ pub struct ControllerBuilder<C: Operator> {
     pub(crate) webhooks:
         BTreeMap<String, warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>>,
 }
-
-// pub trait AsyncPtrFuture<O: Operator>: std::future::Future<Output=AdmissionResult<O::Manifest>> + Send + 'static {}
-
-// pub type AsyncFnPtrReturn<O: Operator> = std::pin::Pin<Box<
-//         dyn AsyncPtrFuture<O>
-//     >
-// >;
-
-// pub trait AsyncFn<O: Operator>: Fn(O::Manifest, &<O::ObjectState as ObjectState>::SharedState) -> AsyncFnPtrReturn<O> {}
-
-// pub  type AsyncFnPtr<O: Operator> = Box<
-//     dyn AsyncFn<O>
-// >;
 
 impl<O: Operator> ControllerBuilder<O> {
     /// Create builder from operator singleton.
@@ -203,6 +182,7 @@ impl<O: Operator> ControllerBuilder<O> {
         R: GenericFuture<O>,
         F: GenericAsyncFn<O, R>,
     {
+        use kube::Resource;
         let path = format!(
             "/{}/{}/{}",
             O::Manifest::group(&()),
@@ -210,7 +190,7 @@ impl<O: Operator> ControllerBuilder<O> {
             O::Manifest::kind(&())
         );
         let filter = create_boxed_endpoint(Arc::clone(&self.controller), path.to_string(), f);
-        self.webhooks.insert(path.to_string(), filter);
+        self.webhooks.insert(path, filter);
         self
     }
 
@@ -225,43 +205,6 @@ impl<O: Operator> ControllerBuilder<O> {
         self.webhooks.insert(path.to_string(), filter);
         self
     }
-}
-
-#[cfg(feature = "admission-webhook")]
-pub trait GenericFuture<O: Operator>:
-    'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send
-{
-}
-
-#[cfg(feature = "admission-webhook")]
-impl<
-        O: Operator,
-        T: 'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send,
-    > GenericFuture<O> for T
-{
-}
-
-#[cfg(feature = "admission-webhook")]
-pub trait GenericAsyncFn<O: Operator, R>:
-    'static
-    + Clone
-    + Send
-    + Sync
-    + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R
-{
-}
-
-#[cfg(feature = "admission-webhook")]
-impl<
-        O: Operator,
-        R,
-        T: 'static
-            + Clone
-            + Send
-            + Sync
-            + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R,
-    > GenericAsyncFn<O, R> for T
-{
 }
 
 #[derive(Clone)]

@@ -355,9 +355,21 @@ impl Operator for MooseTracker {
     #[cfg(feature = "admission-webhook")]
     async fn admission_hook(
         &self,
-        _manifest: Self::Manifest,
+        manifest: Self::Manifest,
     ) -> crate::admission::AdmissionResult<Self::Manifest> {
-        unimplemented!()
+        use k8s_openapi::apimachinery::pkg::apis::meta::v1::Status;
+        // All moose names start with "M"
+        let name = manifest.meta().name.clone().unwrap();
+        info!("Processing admission hook for moose named {}", name);
+        match name.chars().next() {
+            Some('m') | Some('M') => krator::admission::AdmissionResult::Allow(manifest),
+            _ => krator::admission::AdmissionResult::Deny(Status {
+                code: Some(400),
+                message: Some("Mooses may only have names starting with 'M'.".to_string()),
+                status: Some("Failure".to_string()),
+                ..Default::default()
+            }),
+        }
     }
 
     #[cfg(feature = "admission-webhook")]

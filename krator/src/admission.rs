@@ -1,5 +1,5 @@
 //! Basic implementation of Kubernetes Admission API
-use crate::manager::controller::{GenericAsyncFn, GenericFuture};
+use crate::ObjectState;
 use crate::Operator;
 use anyhow::{bail, ensure, Context};
 use k8s_openapi::{
@@ -19,6 +19,7 @@ use std::{
     fmt::{Display, Formatter},
     sync::Arc,
 };
+use tokio::sync::RwLock;
 use tracing::{info, trace, warn};
 
 /// WebhookResources encapsulates Kubernetes resources necessary to register the admission webhook.
@@ -319,13 +320,6 @@ impl AdmissionTls {
     }
 }
 
-/// Type signature for validating or mutating webhooks.
-// pub type WebhookFn<O: Operator> = fn(
-//     O::Manifest,
-//     &<O::ObjectState as ObjectState>::SharedState,
-// ) -> std::pin::Pin<Box<dyn std::future::Future<Output=AdmissionResult<O::Manifest>> + Send + 'static>>;
-
-//std::pin::Pin<Box<dyn std::future::Future<Output=AdmissionResult<<C as Operator>::Manifest>> + Send>>
 /// Result of admission hook.
 #[allow(clippy::large_enum_variant)]
 pub enum AdmissionResult<T> {
@@ -441,6 +435,41 @@ struct AdmissionReviewResponse {
     response: AdmissionResponse,
 }
 
+/// Trait for Future which returns AdmissionResult.
+pub trait GenericFuture<O: Operator>:
+    'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send
+{
+}
+
+impl<
+        O: Operator,
+        T: 'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send,
+    > GenericFuture<O> for T
+{
+}
+
+/// Trait to represent an admission review function.
+pub trait GenericAsyncFn<O: Operator, R>:
+    'static
+    + Clone
+    + Send
+    + Sync
+    + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R
+{
+}
+
+impl<
+        O: Operator,
+        R,
+        T: 'static
+            + Clone
+            + Send
+            + Sync
+            + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R,
+    > GenericAsyncFn<O, R> for T
+{
+}
+
 #[tracing::instrument(
     level="debug",
     skip(operator, request, hook),
@@ -482,8 +511,6 @@ where
 
     let name = manifest.name();
     let namespace = manifest.namespace();
-
-    // let span = tracing::debug_span!("hook",);
 
     let shared = operator.shared_state().await;
 
