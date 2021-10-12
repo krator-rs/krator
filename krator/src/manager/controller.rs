@@ -1,16 +1,25 @@
 use super::watch::{Watch, WatchHandle};
 #[cfg(feature = "admission-webhook")]
-use crate::admission::WebhookFn;
+use crate::admission::create_boxed_endpoint;
+#[cfg(feature = "admission-webhook")]
+use crate::admission::AdmissionResult;
 use crate::operator::Watchable;
+#[cfg(feature = "admission-webhook")]
+use crate::ObjectState;
 use crate::Operator;
 use kube::api::ListParams;
+#[cfg(feature = "admission-webhook")]
 use kube::Resource;
+#[cfg(feature = "admission-webhook")]
 use std::collections::BTreeMap;
+use std::sync::Arc;
+#[cfg(feature = "admission-webhook")]
+use tokio::sync::RwLock;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
     /// The controller or operator singleton.
-    pub(crate) controller: C,
+    pub(crate) controller: Arc<C>,
     ///  List of watch configurations for objects that will simply be cached
     ///  locally.
     pub(crate) watches: Vec<Watch>,
@@ -26,19 +35,35 @@ pub struct ControllerBuilder<C: Operator> {
     /// watcher tasks and runtime tasks.
     buffer: usize,
     /// Registered webhooks.
-    pub(crate) webhooks: BTreeMap<String, WebhookFn<C>>,
+    #[cfg(feature = "admission-webhook")]
+    pub(crate) webhooks:
+        BTreeMap<String, warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>>,
 }
+
+// pub trait AsyncPtrFuture<O: Operator>: std::future::Future<Output=AdmissionResult<O::Manifest>> + Send + 'static {}
+
+// pub type AsyncFnPtrReturn<O: Operator> = std::pin::Pin<Box<
+//         dyn AsyncPtrFuture<O>
+//     >
+// >;
+
+// pub trait AsyncFn<O: Operator>: Fn(O::Manifest, &<O::ObjectState as ObjectState>::SharedState) -> AsyncFnPtrReturn<O> {}
+
+// pub  type AsyncFnPtr<O: Operator> = Box<
+//     dyn AsyncFn<O>
+// >;
 
 impl<O: Operator> ControllerBuilder<O> {
     /// Create builder from operator singleton.
     pub fn new(operator: O) -> Self {
         ControllerBuilder {
-            controller: operator,
+            controller: Arc::new(operator),
             watches: vec![],
             owns: vec![],
             namespace: None,
             list_params: Default::default(),
             buffer: 32,
+            #[cfg(feature = "admission-webhook")]
             webhooks: BTreeMap::new(),
         }
     }
@@ -173,23 +198,70 @@ impl<O: Operator> ControllerBuilder<O> {
     /// Registers a webhook at the path "/$GROUP/$VERSION/$KIND".
     /// Multiple webhooks can be registered, but must be at different paths.
     #[cfg(feature = "admission-webhook")]
-    pub fn with_webhook(mut self, f: WebhookFn<O>) -> Self {
+    pub fn with_webhook<F, R>(mut self, f: F) -> Self
+    where
+        R: GenericFuture<O>,
+        F: GenericAsyncFn<O, R>,
+    {
         let path = format!(
             "/{}/{}/{}",
             O::Manifest::group(&()),
             O::Manifest::version(&()),
             O::Manifest::kind(&())
         );
-        self.webhooks.insert(path, f);
+        let filter = create_boxed_endpoint(Arc::clone(&self.controller), path.to_string(), f);
+        self.webhooks.insert(path.to_string(), filter);
         self
     }
 
     /// Registers a webhook at the supplied path.
     #[cfg(feature = "admission-webhook")]
-    pub fn with_webhook_at_path(mut self, path: &str, f: WebhookFn<O>) -> Self {
-        self.webhooks.insert(path.to_string(), f);
+    pub fn with_webhook_at_path<F, R>(mut self, path: &str, f: F) -> Self
+    where
+        R: GenericFuture<O>,
+        F: GenericAsyncFn<O, R>,
+    {
+        let filter = create_boxed_endpoint(Arc::clone(&self.controller), path.to_string(), f);
+        self.webhooks.insert(path.to_string(), filter);
         self
     }
+}
+
+#[cfg(feature = "admission-webhook")]
+pub trait GenericFuture<O: Operator>:
+    'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send
+{
+}
+
+#[cfg(feature = "admission-webhook")]
+impl<
+        O: Operator,
+        T: 'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send,
+    > GenericFuture<O> for T
+{
+}
+
+#[cfg(feature = "admission-webhook")]
+pub trait GenericAsyncFn<O: Operator, R>:
+    'static
+    + Clone
+    + Send
+    + Sync
+    + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R
+{
+}
+
+#[cfg(feature = "admission-webhook")]
+impl<
+        O: Operator,
+        R,
+        T: 'static
+            + Clone
+            + Send
+            + Sync
+            + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R,
+    > GenericAsyncFn<O, R> for T
+{
 }
 
 #[derive(Clone)]

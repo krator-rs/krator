@@ -1,6 +1,6 @@
 //! Defines types for registering controllers with runtime.
 use crate::{operator::Operator, store::Store};
-use std::sync::Arc;
+// use std::sync::Arc;
 #[cfg(feature = "admission-webhook")]
 use warp::Filter;
 pub mod tasks;
@@ -26,6 +26,7 @@ pub struct Manager {
     filter: warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>,
 }
 
+#[cfg(feature = "admission-webhook")]
 fn not_found() -> warp::reply::WithStatus<warp::reply::Json> {
     warp::reply::with_status(warp::reply::json(&()), warp::http::StatusCode::NOT_FOUND)
 }
@@ -48,16 +49,8 @@ impl Manager {
 
     /// Register a controller with the manager.
     pub fn register_controller<C: Operator>(&mut self, builder: ControllerBuilder<C>) {
-        let webhooks = builder.webhooks.clone();
-
-        let (operator, controller, tasks) =
-            controller_tasks(self.kubeconfig.clone(), builder, self.store.clone());
-
         #[cfg(feature = "admission-webhook")]
-        for (path, f) in webhooks {
-            let endpoint =
-                crate::admission::create_endpoint::<C>(Arc::clone(&operator), path.to_string(), f);
-
+        for endpoint in builder.webhooks.values() {
             // Create temporary variable w/ throwaway filter of correct type.
             let mut temp = warp::any().map(not_found).boxed();
 
@@ -65,13 +58,16 @@ impl Manager {
             std::mem::swap(&mut temp, &mut self.filter);
 
             // Compose new filter from new endpoint and temporary (now holding original self.filter).
-            let mut new_filter = endpoint.or(temp).unify().boxed();
+            let mut new_filter = endpoint.clone().or(temp).unify().boxed();
 
             // Swap new filter back into self.filter.
             std::mem::swap(&mut new_filter, &mut self.filter);
 
             // Throwaway filter stored in new_filter implicitly dropped.
         }
+
+        let (controller, tasks) =
+            controller_tasks(self.kubeconfig.clone(), builder, self.store.clone());
 
         self.controllers.push(controller);
         self.controller_tasks.extend(tasks);

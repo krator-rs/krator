@@ -197,16 +197,21 @@ pub(crate) fn controller_tasks<C: Operator>(
     kubeconfig: kube::Config,
     controller: ControllerBuilder<C>,
     store: Store,
-) -> (Arc<C>, Controller, Vec<OperatorTask>) {
+) -> (Controller, Vec<OperatorTask>) {
     let mut watches = Vec::new();
     let mut owns = Vec::new();
     let mut tasks = Vec::new();
     let buffer = controller.buffer();
     let (manages, rx) = controller.manages().handle(buffer);
-    let operator = Arc::new(controller.controller);
 
     // Create main Operator task.
-    let task = launch_runtime(kubeconfig, Arc::clone(&operator), rx, store.clone()).boxed();
+    let task = launch_runtime(
+        kubeconfig,
+        Arc::clone(&controller.controller),
+        rx,
+        store.clone(),
+    )
+    .boxed();
     tasks.push(task);
 
     for watch in controller.watches {
@@ -224,7 +229,6 @@ pub(crate) fn controller_tasks<C: Operator>(
     }
 
     (
-        operator,
         Controller {
             manages,
             owns,

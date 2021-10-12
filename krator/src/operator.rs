@@ -55,12 +55,12 @@ pub trait Operator: 'static + Sync + Send {
         Ok(())
     }
 
-    // #[cfg(feature = "admission-webhook")]
-    // /// Invoked when object is created or modified. Can mutate the and / or deny the request.
-    // async fn admission_hook(
-    //     &self,
-    //     manifest: Self::Manifest,
-    // ) -> crate::admission::AdmissionResult<Self::Manifest>;
+    #[cfg(feature = "admission-webhook")]
+    /// Invoked when object is created or modified. Can mutate the and / or deny the request.
+    async fn admission_hook(
+        &self,
+        manifest: Self::Manifest,
+    ) -> crate::admission::AdmissionResult<Self::Manifest>;
 
     #[cfg(feature = "admission-webhook")]
     /// Gets called by the operator if the admission-webhook feature is enabled. The function should

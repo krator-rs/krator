@@ -1,5 +1,5 @@
 //! Basic implementation of Kubernetes Admission API
-use crate::ObjectState;
+use crate::manager::controller::{GenericAsyncFn, GenericFuture};
 use crate::Operator;
 use anyhow::{bail, ensure, Context};
 use k8s_openapi::{
@@ -320,11 +320,12 @@ impl AdmissionTls {
 }
 
 /// Type signature for validating or mutating webhooks.
-pub type WebhookFn<C> = fn(
-    <C as Operator>::Manifest,
-    &<<C as Operator>::ObjectState as ObjectState>::SharedState,
-) -> AdmissionResult<<C as Operator>::Manifest>;
+// pub type WebhookFn<O: Operator> = fn(
+//     O::Manifest,
+//     &<O::ObjectState as ObjectState>::SharedState,
+// ) -> std::pin::Pin<Box<dyn std::future::Future<Output=AdmissionResult<O::Manifest>> + Send + 'static>>;
 
+//std::pin::Pin<Box<dyn std::future::Future<Output=AdmissionResult<<C as Operator>::Manifest>> + Send>>
 /// Result of admission hook.
 #[allow(clippy::large_enum_variant)]
 pub enum AdmissionResult<T> {
@@ -451,11 +452,15 @@ struct AdmissionReviewResponse {
         user_info=?request.request.user_info
     )
 )]
-async fn review<O: Operator>(
+async fn review<O: Operator, R, F>(
     operator: Arc<O>,
     request: AdmissionReviewRequest<O::Manifest>,
-    hook: &WebhookFn<O>,
-) -> warp::reply::WithStatus<warp::reply::Json> {
+    hook: F,
+) -> warp::reply::WithStatus<warp::reply::Json>
+where
+    R: GenericFuture<O>,
+    F: GenericAsyncFn<O, R>,
+{
     let manifest = match request.request.operation {
         AdmissionRequestOperation::Create { object, .. } => object,
         AdmissionRequestOperation::Update {
@@ -482,10 +487,7 @@ async fn review<O: Operator>(
 
     let shared = operator.shared_state().await;
 
-    let result = {
-        let shared = shared.read().await;
-        hook(manifest.clone(), &*shared)
-    };
+    let result = hook(manifest.clone(), shared).await;
 
     let response = match result {
         AdmissionResult::Allow(new_manifest) => {
@@ -542,50 +544,62 @@ async fn review<O: Operator>(
     )
 }
 
-use warp::Rejection;
-pub(crate) fn create_endpoint<O: Operator>(
+pub(crate) fn create_boxed_endpoint<O: Operator, R, F>(
     operator: Arc<O>,
     path: String,
-    f: WebhookFn<O>,
-) -> impl warp::Filter<Extract = (warp::reply::WithStatus<warp::reply::Json>,), Error = Rejection> + Clone
+    f: F,
+) -> warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>
+where
+    R: GenericFuture<O>,
+    F: GenericAsyncFn<O, R>,
 {
     use warp::Filter;
+
     warp::path(path)
         .and(warp::path::end())
         .and(warp::post())
+        .map(move || f.clone())
         .and(warp::body::json())
-        .and_then(move |request: AdmissionReviewRequest<O::Manifest>| {
+        .and_then(move |f: F, request: AdmissionReviewRequest<O::Manifest>| {
             let operator = Arc::clone(&operator);
             async move {
-                let response = review(operator, request, &f).await;
+                let response = review(operator, request, f).await;
                 Ok::<_, std::convert::Infallible>(response)
             }
         })
+        .boxed()
 }
 
-pub(crate) async fn endpoint<O: Operator>(_operator: Arc<O>) {
-    todo!()
-    // let tls = operator
-    //     .admission_hook_tls()
-    //     .await
-    //     .expect("getting webhook tls AdmissionTls failed");
+pub(crate) async fn endpoint<O: Operator>(operator: Arc<O>) {
+    let tls = operator
+        .admission_hook_tls()
+        .await
+        .expect("getting webhook tls AdmissionTls failed");
 
-    // use warp::Filter;
-    // let routes = warp::any()
-    //     .and(warp::post())
-    //     .and(warp::body::json())
-    //     .and_then(move |request: AdmissionReviewRequest<O::Manifest>| {
-    //         let operator = Arc::clone(&operator);
-    //         async move {
-    //             let response = review(operator, request).await;
-    //             Ok::<_, std::convert::Infallible>(response)
-    //         }
-    //     });
+    use warp::Filter;
+    let routes = warp::any()
+        .map(move || Arc::clone(&operator))
+        .map(|operator: Arc<O>| {
+            let hook_operator = Arc::clone(&operator);
+            let func = move |manifest: O::Manifest, _| {
+                let inner_operator = Arc::clone(&hook_operator);
+                async move { inner_operator.admission_hook(manifest).await }
+            };
+            (operator, func)
+        })
+        .and(warp::post())
+        .and(warp::body::json())
+        .and_then(
+            move |(operator, f), request: AdmissionReviewRequest<O::Manifest>| async move {
+                let response = review(operator, request, f).await;
+                Ok::<_, std::convert::Infallible>(response)
+            },
+        );
 
-    // warp::serve(routes)
-    //     .tls()
-    //     .cert(tls.cert)
-    //     .key(tls.private_key)
-    //     .run(([0, 0, 0, 0], 8443))
-    //     .await;
+    warp::serve(routes)
+        .tls()
+        .cert(tls.cert)
+        .key(tls.private_key)
+        .run(([0, 0, 0, 0], 8443))
+        .await;
 }
