@@ -7,7 +7,7 @@ authors = [
     "Matthew Fisher <matt.fisher@microsoft.com>",
     "Matt Butcher <matt.butcher@microsoft.com>",
 ]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 description = "A Kubernetes operator implementation in Rust"
 repository = "https://github.com/krator-rs/krator"

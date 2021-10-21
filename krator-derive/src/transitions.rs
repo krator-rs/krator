@@ -79,7 +79,7 @@ fn generate_impl(transitions: Transitions, generics: Generics, name: Ident) -> T
     for transition_type in transitions.all.into_iter() {
         let expanded = quote! {
             #[automatically_derived]
-            impl#impl_generics krator::TransitionTo<#transition_type> for #name#ty_generics #where_clause {}
+            impl #impl_generics krator::TransitionTo<#transition_type> for #name #ty_generics #where_clause {}
         };
         token_stream.extend(TokenStream::from(expanded));
     }
