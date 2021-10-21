@@ -44,7 +44,6 @@ impl Manager {
     /// Start the manager, blocking forever.
     pub async fn start(self) {
         use futures::FutureExt;
-        use std::convert::TryFrom;
         use tasks::launch_watcher;
 
         let mut tasks = self.controller_tasks;
