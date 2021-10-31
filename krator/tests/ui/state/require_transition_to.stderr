@@ -1,10 +1,8 @@
 error[E0277]: the trait bound `TestState: TransitionTo<_>` is not satisfied
-  --> $DIR/require_transition_to.rs:38:32
+  --> $DIR/require_transition_to.rs:38:9
    |
 LL |         Transition::next(self, TestState)
-   |         ----------------       ^^^^^^^^^ the trait `TransitionTo<_>` is not implemented for `TestState`
-   |         |
-   |         required by a bound introduced by this call
+   |         ^^^^^^^^^^^^^^^^ the trait `TransitionTo<_>` is not implemented for `TestState`
    |
 note: required by `Transition::<S>::next`
   --> $SRC_DIR/src/state.rs:43:5
