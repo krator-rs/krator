@@ -6,13 +6,11 @@ LL |         Transition::next(self, NotState)
    |         |
    |         required by a bound introduced by this call
    |
-note: required by `Transition::<S>::next`
-  --> $SRC_DIR/src/state.rs:43:5
+note: required by a bound in `Transition::<S>::next`
+  --> $SRC_DIR/src/state.rs:43:33
    |
-LL | /     pub fn next<I: State<S>, O: State<S>>(_i: Box<I>, o: O) -> Transition<S>
-LL | |     where
-LL | |         I: TransitionTo<O>,
-   | |___________________________^
+LL |     pub fn next<I: State<S>, O: State<S>>(_i: Box<I>, o: O) -> Transition<S>
+   |                                 ^^^^^^^^ required by this bound in `Transition::<S>::next`
 
 error: aborting due to previous error
 

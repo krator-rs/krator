@@ -4,13 +4,11 @@ error[E0277]: the trait bound `TestState: TransitionTo<_>` is not satisfied
 LL |         Transition::next(self, TestState)
    |         ^^^^^^^^^^^^^^^^ the trait `TransitionTo<_>` is not implemented for `TestState`
    |
-note: required by `Transition::<S>::next`
-  --> $SRC_DIR/src/state.rs:43:5
+note: required by a bound in `Transition::<S>::next`
+  --> $SRC_DIR/src/state.rs:45:12
    |
-LL | /     pub fn next<I: State<S>, O: State<S>>(_i: Box<I>, o: O) -> Transition<S>
-LL | |     where
-LL | |         I: TransitionTo<O>,
-   | |___________________________^
+LL |         I: TransitionTo<O>,
+   |            ^^^^^^^^^^^^^^^ required by this bound in `Transition::<S>::next`
 
 error: aborting due to previous error
 
