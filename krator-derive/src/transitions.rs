@@ -37,14 +37,14 @@ pub fn run_custom_derive(input: TokenStream) -> TokenStream {
         let message = format!(
             "No `{}` attribute found for `{}`. Please specify at least one type to transition to",
             ATTRIBUTE_NAME,
-            name.to_string()
+            name
         );
         TokenStream::from(Error::new(name.span(), message).to_compile_error())
     } else if transitions.len() > 1 {
         let message = format!(
             "Multiple `{}` attributes found for `{}`. Please specify only one attribute",
             ATTRIBUTE_NAME,
-            name.to_string()
+            name
         );
         TokenStream::from(Error::new(name.span(), message).to_compile_error())
     } else {
