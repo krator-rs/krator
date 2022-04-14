@@ -6,8 +6,7 @@ LL |         Transition::next(self, OtherState)
    |         |
    |         required by a bound introduced by this call
    |
-   = help: the following implementations were found:
-             <OtherState as krator::State<OtherPodState>>
+   = help: the trait `krator::State<OtherPodState>` is implemented for `OtherState`
 note: required by a bound in `Transition::<S>::next`
   --> $SRC_DIR/src/state.rs:43:33
    |

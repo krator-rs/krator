@@ -6,6 +6,9 @@ LL |         Transition::next(self, NotState)
    |         |
    |         required by a bound introduced by this call
    |
+   = help: the following other types implement trait `krator::State<S>`:
+             <Stub as krator::State<ResourceState>>
+             <TestState as krator::State<PodState>>
 note: required by a bound in `Transition::<S>::next`
   --> $SRC_DIR/src/state.rs:43:33
    |
