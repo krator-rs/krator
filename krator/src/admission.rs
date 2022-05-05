@@ -19,8 +19,8 @@ use std::{
     fmt::{Display, Formatter},
     sync::Arc,
 };
+use tokio::sync::RwLock;
 use tracing::{info, trace, warn};
-use tracing_futures::Instrument;
 
 /// WebhookResources encapsulates Kubernetes resources necessary to register the admission webhook.
 /// and provides some convenience functions
@@ -320,12 +320,6 @@ impl AdmissionTls {
     }
 }
 
-/// Type signature for validating or mutating webhooks.
-pub type WebhookFn<C> = dyn Fn(
-    <C as Operator>::Manifest,
-    <<C as Operator>::ObjectState as ObjectState>::SharedState,
-) -> AdmissionResult<<C as Operator>::Manifest>;
-
 /// Result of admission hook.
 #[allow(clippy::large_enum_variant)]
 pub enum AdmissionResult<T> {
@@ -441,9 +435,44 @@ struct AdmissionReviewResponse {
     response: AdmissionResponse,
 }
 
+/// Trait for Future which returns AdmissionResult.
+pub trait GenericFuture<O: Operator>:
+    'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send
+{
+}
+
+impl<
+        O: Operator,
+        T: 'static + std::future::Future<Output = AdmissionResult<O::Manifest>> + Send,
+    > GenericFuture<O> for T
+{
+}
+
+/// Trait to represent an admission review function.
+pub trait GenericAsyncFn<O: Operator, R>:
+    'static
+    + Clone
+    + Send
+    + Sync
+    + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R
+{
+}
+
+impl<
+        O: Operator,
+        R,
+        T: 'static
+            + Clone
+            + Send
+            + Sync
+            + Fn(O::Manifest, Arc<RwLock<<O::ObjectState as ObjectState>::SharedState>>) -> R,
+    > GenericAsyncFn<O, R> for T
+{
+}
+
 #[tracing::instrument(
     level="debug",
-    skip(operator, request),
+    skip(operator, request, hook),
     fields(
         name=%request.request.name(),
         namespace=?request.request.namespace(),
@@ -452,10 +481,15 @@ struct AdmissionReviewResponse {
         user_info=?request.request.user_info
     )
 )]
-async fn review<O: Operator>(
+async fn review<O: Operator, R, F>(
     operator: Arc<O>,
     request: AdmissionReviewRequest<O::Manifest>,
-) -> warp::reply::Json {
+    hook: F,
+) -> warp::reply::WithStatus<warp::reply::Json>
+where
+    R: GenericFuture<O>,
+    F: GenericAsyncFn<O, R>,
+{
     let manifest = match request.request.operation {
         AdmissionRequestOperation::Create { object, .. } => object,
         AdmissionRequestOperation::Update {
@@ -478,12 +512,9 @@ async fn review<O: Operator>(
     let name = manifest.name();
     let namespace = manifest.namespace();
 
-    let span = tracing::debug_span!("Operator::admission_hook",);
+    let shared = operator.shared_state().await;
 
-    let result = operator
-        .admission_hook(manifest.clone())
-        .instrument(span)
-        .await;
+    let result = hook(manifest.clone(), shared).await;
 
     let response = match result {
         AdmissionResult::Allow(new_manifest) => {
@@ -530,11 +561,40 @@ async fn review<O: Operator>(
             }
         }
     };
-    warp::reply::json(&AdmissionReviewResponse {
-        api_version: request.api_version,
-        kind: request.kind,
-        response,
-    })
+    warp::reply::with_status(
+        warp::reply::json(&AdmissionReviewResponse {
+            api_version: request.api_version,
+            kind: request.kind,
+            response,
+        }),
+        warp::http::StatusCode::OK,
+    )
+}
+
+pub(crate) fn create_boxed_endpoint<O: Operator, R, F>(
+    operator: Arc<O>,
+    path: String,
+    f: F,
+) -> warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>
+where
+    R: GenericFuture<O>,
+    F: GenericAsyncFn<O, R>,
+{
+    use warp::Filter;
+
+    warp::path(path)
+        .and(warp::path::end())
+        .and(warp::post())
+        .map(move || f.clone())
+        .and(warp::body::json())
+        .and_then(move |f: F, request: AdmissionReviewRequest<O::Manifest>| {
+            let operator = Arc::clone(&operator);
+            async move {
+                let response = review(operator, request, f).await;
+                Ok::<_, std::convert::Infallible>(response)
+            }
+        })
+        .boxed()
 }
 
 pub(crate) async fn endpoint<O: Operator>(operator: Arc<O>) {
@@ -545,15 +605,23 @@ pub(crate) async fn endpoint<O: Operator>(operator: Arc<O>) {
 
     use warp::Filter;
     let routes = warp::any()
+        .map(move || Arc::clone(&operator))
+        .map(|operator: Arc<O>| {
+            let hook_operator = Arc::clone(&operator);
+            let func = move |manifest: O::Manifest, _| {
+                let inner_operator = Arc::clone(&hook_operator);
+                async move { inner_operator.admission_hook(manifest).await }
+            };
+            (operator, func)
+        })
         .and(warp::post())
         .and(warp::body::json())
-        .and_then(move |request: AdmissionReviewRequest<O::Manifest>| {
-            let operator = Arc::clone(&operator);
-            async move {
-                let response = review(operator, request).await;
+        .and_then(
+            move |(operator, f), request: AdmissionReviewRequest<O::Manifest>| async move {
+                let response = review(operator, request, f).await;
                 Ok::<_, std::convert::Infallible>(response)
-            }
-        });
+            },
+        );
 
     warp::serve(routes)
         .tls()

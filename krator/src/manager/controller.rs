@@ -1,14 +1,17 @@
 use super::watch::{Watch, WatchHandle};
 #[cfg(feature = "admission-webhook")]
-use crate::admission::WebhookFn;
+use crate::admission::{create_boxed_endpoint, GenericAsyncFn, GenericFuture};
 use crate::operator::Watchable;
 use crate::Operator;
 use kube::api::ListParams;
+#[cfg(feature = "admission-webhook")]
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
     /// The controller or operator singleton.
-    pub(crate) controller: C,
+    pub(crate) controller: Arc<C>,
     ///  List of watch configurations for objects that will simply be cached
     ///  locally.
     pub(crate) watches: Vec<Watch>,
@@ -23,18 +26,24 @@ pub struct ControllerBuilder<C: Operator> {
     /// The buffer length for Tokio channels used to communicate between
     /// watcher tasks and runtime tasks.
     buffer: usize,
+    /// Registered webhooks.
+    #[cfg(feature = "admission-webhook")]
+    pub(crate) webhooks:
+        BTreeMap<String, warp::filters::BoxedFilter<(warp::reply::WithStatus<warp::reply::Json>,)>>,
 }
 
 impl<O: Operator> ControllerBuilder<O> {
     /// Create builder from operator singleton.
     pub fn new(operator: O) -> Self {
         ControllerBuilder {
-            controller: operator,
+            controller: Arc::new(operator),
             watches: vec![],
             owns: vec![],
             namespace: None,
             list_params: Default::default(),
             buffer: 32,
+            #[cfg(feature = "admission-webhook")]
+            webhooks: BTreeMap::new(),
         }
     }
 
@@ -165,30 +174,36 @@ impl<O: Operator> ControllerBuilder<O> {
         self
     }
 
-    /// Registers a validating webhook at the path "/$GROUP/$VERSION/$KIND".
+    /// Registers a webhook at the path "/$GROUP/$VERSION/$KIND".
     /// Multiple webhooks can be registered, but must be at different paths.
     #[cfg(feature = "admission-webhook")]
-    pub(crate) fn validates(self, _f: &WebhookFn<O>) -> Self {
-        todo!()
+    pub fn with_webhook<F, R>(mut self, f: F) -> Self
+    where
+        R: GenericFuture<O>,
+        F: GenericAsyncFn<O, R>,
+    {
+        use kube::Resource;
+        let path = format!(
+            "/{}/{}/{}",
+            O::Manifest::group(&()),
+            O::Manifest::version(&()),
+            O::Manifest::kind(&())
+        );
+        let filter = create_boxed_endpoint(Arc::clone(&self.controller), path.to_string(), f);
+        self.webhooks.insert(path, filter);
+        self
     }
 
-    /// Registers a validating webhook at the supplied path.
+    /// Registers a webhook at the supplied path.
     #[cfg(feature = "admission-webhook")]
-    pub(crate) fn validates_at_path(self, _path: &str, _f: &WebhookFn<O>) -> Self {
-        todo!()
-    }
-
-    /// Registers a mutating webhook at the path "/$GROUP/$VERSION/$KIND".
-    /// Multiple webhooks can be registered, but must be at different paths.
-    #[cfg(feature = "admission-webhook")]
-    pub(crate) fn mutates(self, _f: &WebhookFn<O>) -> Self {
-        todo!()
-    }
-
-    /// Registers a mutating webhook at the supplied path.
-    #[cfg(feature = "admission-webhook")]
-    pub(crate) fn mutates_at_path(self, _path: &str, _f: &WebhookFn<O>) -> Self {
-        todo!()
+    pub fn with_webhook_at_path<F, R>(mut self, path: &str, f: F) -> Self
+    where
+        R: GenericFuture<O>,
+        F: GenericAsyncFn<O, R>,
+    {
+        let filter = create_boxed_endpoint(Arc::clone(&self.controller), path.to_string(), f);
+        self.webhooks.insert(path.to_string(), filter);
+        self
     }
 }
 

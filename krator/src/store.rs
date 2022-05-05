@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-#[cfg(not(feature = "admission-webhook"))]
 use kube::api::DynamicObject;
 
 use kube::api::GroupVersionKind;
@@ -51,7 +50,6 @@ impl Store {
     }
 
     /// Clear cache for specified object kind.
-    #[cfg(not(feature = "admission-webhook"))]
     pub(crate) async fn reset(&self, gvk: &GroupVersionKind) {
         let mut objects = self.objects.write().await;
         let key = gvk.clone();
@@ -60,7 +58,6 @@ impl Store {
     }
 
     /// Delete a cached object.
-    #[cfg(not(feature = "admission-webhook"))]
     pub(crate) async fn delete_gvk(
         &self,
         namespace: Option<String>,
@@ -75,7 +72,6 @@ impl Store {
     }
 
     /// Insert an object that has already been type erased.
-    #[cfg(not(feature = "admission-webhook"))]
     pub(crate) async fn insert_gvk(
         &self,
         namespace: Option<String>,
