@@ -49,7 +49,6 @@ notice = "warn"
 # output a note when they are encountered.
 ignore = [
     "RUSTSEC-2020-0071",
-    "RUSTSEC-2020-0159"
 ]
 # Threshold for security vulnerabilities, any vulnerability with a CVSS score
 # lower than the range specified will be ignored. Note that ignored advisories
@@ -108,6 +107,7 @@ exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
     #{ allow = ["Zlib"], name = "adler32", version = "*" },
+    { allow = ["Unicode-DFS-2016"], name = "unicode-ident" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
@@ -179,11 +179,7 @@ deny = [
 # Certain crates/versions that will be skipped when doing duplicate detection.
 skip = [
     # Clap is using a lower version, so we can ignore it for now
-    { name = "ansi_term", version = "=0.11.0" },
     { name = "strsim", version = "=0.8.0" },
-    # Duplicate deps from kube dependencies
-    { name = "pin-project", version = "=0.4.27"},
-    { name = "pin-project-internal", version = "=0.4.27"},
     # Different major versions used by serde-value and opentelemetry-jaeger (dev-dependency)
     { name = "ordered-float", version = "=1.1.1"},
 ]
