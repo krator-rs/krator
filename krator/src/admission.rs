@@ -188,6 +188,7 @@ impl WebhookResources {
                     dry_run: false,
                     force: true,
                     field_manager: Some("krator".to_string()),
+                    field_validation: None,
                 },
                 &Patch::Apply(self.secret()),
             )
@@ -204,6 +205,7 @@ impl WebhookResources {
                     dry_run: false,
                     force: true,
                     field_manager: Some("krator".to_string()),
+                    field_validation: None,
                 },
                 &Patch::Apply(self.service()),
             )
@@ -219,6 +221,7 @@ impl WebhookResources {
                     dry_run: false,
                     force: true,
                     field_manager: Some("krator".to_string()),
+                    field_validation: None,
                 },
                 &Patch::Apply(self.webhook_config()),
             )
@@ -384,9 +387,9 @@ struct AdmissionRequest<T> {
 impl<T: Resource> AdmissionRequest<T> {
     fn name(&self) -> String {
         match &self.operation {
-            AdmissionRequestOperation::Create { object, .. } => object.name(),
-            AdmissionRequestOperation::Update { object, .. } => object.name(),
-            AdmissionRequestOperation::Delete { old_object, .. } => old_object.name(),
+            AdmissionRequestOperation::Create { object, .. } => object.name_unchecked(),
+            AdmissionRequestOperation::Update { object, .. } => object.name_unchecked(),
+            AdmissionRequestOperation::Delete { old_object, .. } => old_object.name_unchecked(),
         }
     }
 
@@ -475,7 +478,7 @@ async fn review<O: Operator>(
         AdmissionRequestOperation::Delete { old_object, .. } => old_object,
     };
 
-    let name = manifest.name();
+    let name = manifest.name_any();
     let namespace = manifest.namespace();
 
     let span = tracing::debug_span!("Operator::admission_hook",);
