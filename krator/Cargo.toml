@@ -60,7 +60,7 @@ features = ["v1_22"]
 [dev-dependencies]
 kube-derive = "0.74"
 schemars = "0.8"
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 chrono = "0.4"
 rand = "0.8"
 tracing-subscriber = "0.2"
