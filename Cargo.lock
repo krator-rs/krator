@@ -245,9 +245,9 @@ dependencies = [
 
 [[package]]
 name = "darling"
-version = "0.13.4"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
+checksum = "4529658bdda7fd6769b8614be250cdcfc3aeb0ee72fe66f9e41e5e5eb73eac02"
 dependencies = [
  "darling_core",
  "darling_macro",
@@ -255,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "darling_core"
-version = "0.13.4"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
+checksum = "649c91bc01e8b1eac09fb91e8dbc7d517684ca6be8ebc75bb9cafc894f9fdb6f"
 dependencies = [
  "fnv",
  "ident_case",
@@ -269,9 +269,9 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.13.4"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
+checksum = "ddfc69c5bfcbd2fc09a0f38451d2daf0e372e367986a83906d1b0dbc88134fb5"
 dependencies = [
  "darling_core",
  "quote",
@@ -814,9 +814,9 @@ dependencies = [
 
 [[package]]
 name = "k8s-openapi"
-version = "0.14.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0489fc937cc7616a9abfa61bf39c250d7e32e1325ef028c8d9278dd24ea395b3"
+checksum = "d2ae2c04fcee6b01b04e3aadd56bb418932c8e0a9d8a93f48bc68c6bdcdb559d"
 dependencies = [
  "base64",
  "bytes",
@@ -847,7 +847,8 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yaml 0.8.26",
+ "serde_yaml 0.9.9",
  "structopt",
  "tokio",
  "tokio-stream",
@@ -873,15 +874,15 @@ dependencies = [
  "schemars",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yaml 0.8.26",
  "syn",
 ]
 
 [[package]]
 name = "kube"
-version = "0.71.0"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "342744dfeb81fe186b84f485b33f12c6a15d3396987d933b06a566a3db52ca38"
+checksum = "a527a8001a61d8d470dab27ac650889938760c243903e7cd90faaf7c60a34bdd"
 dependencies = [
  "k8s-openapi",
  "kube-client",
@@ -891,9 +892,9 @@ dependencies = [
 
 [[package]]
 name = "kube-client"
-version = "0.71.0"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f69a504997799340408635d6e351afb8aab2c34ca3165e162f41b3b34a69a79"
+checksum = "c0d48f42df4e8342e9f488c4b97e3759d0042c4e7ab1a853cc285adb44409480"
 dependencies = [
  "base64",
  "bytes",
@@ -914,11 +915,11 @@ dependencies = [
  "pem",
  "pin-project",
  "rustls 0.20.6",
- "rustls-pemfile 0.3.0",
+ "rustls-pemfile",
  "secrecy",
  "serde",
  "serde_json",
- "serde_yaml",
+ "serde_yaml 0.8.26",
  "thiserror",
  "tokio",
  "tokio-native-tls",
@@ -930,9 +931,9 @@ dependencies = [
 
 [[package]]
 name = "kube-core"
-version = "0.71.0"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a247487699941baaf93438d65b12d4e32450bea849d619d19ed394e8a4a645"
+checksum = "91f56027f862fdcad265d2e9616af416a355e28a1c620bb709083494753e070d"
 dependencies = [
  "chrono",
  "form_urlencoded",
@@ -948,9 +949,9 @@ dependencies = [
 
 [[package]]
 name = "kube-derive"
-version = "0.71.0"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "203f7c5acf9d0dfb0b08d44ec1d66ace3d1dfe0cdd82e65e274f3f96615d666c"
+checksum = "66d74121eb41af4480052901f31142d8d9bbdf1b7c6b856da43bcb02f5b1b177"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -961,9 +962,9 @@ dependencies = [
 
 [[package]]
 name = "kube-runtime"
-version = "0.71.0"
+version = "0.74.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02ea50e6ed56578e1d1d02548901b12fe6d3edbf110269a396955e285d487973"
+checksum = "8fdcf5a20f968768e342ef1a457491bb5661fccd81119666d626c57500b16d99"
 dependencies = [
  "ahash",
  "backoff",
@@ -1579,18 +1580,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0167bac7a9f490495f3c33013e7722b53cb087ecbe082fb0c6387c96f634ea50"
 dependencies = [
  "openssl-probe",
- "rustls-pemfile 1.0.1",
+ "rustls-pemfile",
  "schannel",
  "security-framework",
-]
-
-[[package]]
-name = "rustls-pemfile"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ee86d63972a7c661d1536fefe8c3c8407321c3df668891286de28abcd087360"
-dependencies = [
- "base64",
 ]
 
 [[package]]
@@ -1794,6 +1786,19 @@ dependencies = [
  "ryu",
  "serde",
  "yaml-rust",
+]
+
+[[package]]
+name = "serde_yaml"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f50845f68d5c693aac7d72a25415ddd21cb8182c04eafe447b73af55a05f9e1b"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "ryu",
+ "serde",
+ "unsafe-libyaml",
 ]
 
 [[package]]
@@ -2186,9 +2191,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.2.5"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba3f3efabf7fb41fae8534fc20a817013dd1c12cb45441efb6c82e6556b4cd8"
+checksum = "3c530c8675c1dbf98facee631536fa116b5fb6382d7dd6dc1b118d970eafe3ba"
 dependencies = [
  "base64",
  "bitflags",
@@ -2406,6 +2411,12 @@ name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
+
+[[package]]
+name = "unsafe-libyaml"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "931179334a56395bcf64ba5e0ff56781381c1a5832178280c7d7f91d1679aeb0"
 
 [[package]]
 name = "untrusted"

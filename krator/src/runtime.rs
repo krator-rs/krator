@@ -36,7 +36,7 @@ impl<R: Resource> From<&ObjectEvent<R>> for PrettyEvent {
     fn from(event: &ObjectEvent<R>) -> Self {
         match event {
             ObjectEvent::Applied(object) => PrettyEvent::Applied {
-                name: object.name(),
+                name: object.name_unchecked(),
                 namespace: object.namespace(),
             },
             ObjectEvent::Deleted { name, namespace } => PrettyEvent::Deleted {
@@ -185,7 +185,7 @@ impl<O: Operator> OperatorRuntime<O> {
                 match event {
                     ObjectEvent::Applied(manifest) => {
                         trace!(
-                            name=%manifest.name(),
+                            name=%manifest.name_any(),
                             namespace=?manifest.namespace(),
                             "Resource applied.",
                         );
@@ -269,7 +269,7 @@ impl<O: Operator> OperatorRuntime<O> {
         // Now that we've sent off deletes, queue an apply event for all pods
         for object in objects.into_iter() {
             trace!(
-                name=%object.name(),
+                name=%object.name_any(),
                 namespace=?object.namespace(),
                 "object_applied"
             );
@@ -377,19 +377,30 @@ async fn run_object_task<O: Operator>(
     let state: O::InitialState = Default::default();
     let (namespace, name) = {
         let m = manifest.latest();
+        let name = match &m.meta().name {
+            Some(name) => name.clone(),
+            None => {
+                error!(
+                    "Attempted to launch task for resource object without name {:?}",
+                    m.meta()
+                );
+                return;
+            }
+        };
         match operator.registration_hook(manifest.clone()).await {
             Ok(()) => debug!("Running hook complete."),
             Err(e) => {
                 error!(
                     "Operator registration hook for object {} in namespace {:?} failed: {:?}",
-                    m.name(),
+                    name,
                     m.namespace(),
                     e
                 );
                 return;
             }
         }
-        (m.namespace(), m.name())
+
+        (m.namespace(), name)
     };
 
     tokio::select! {

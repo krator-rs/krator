@@ -24,7 +24,7 @@ impl<R: Resource> From<&R> for ObjectKey {
     fn from(object: &R) -> ObjectKey {
         ObjectKey {
             namespace: object.namespace(),
-            name: object.name(),
+            name: object.name_unchecked(),
         }
     }
 }

@@ -43,11 +43,11 @@ impl<R: Resource> From<&Event<R>> for PrettyEvent {
     fn from(event: &Event<R>) -> Self {
         match event {
             Event::Applied(object) => PrettyEvent::Applied {
-                name: object.name(),
+                name: object.name_unchecked(),
                 namespace: object.namespace(),
             },
             Event::Deleted(object) => PrettyEvent::Deleted {
-                name: object.name(),
+                name: object.name_unchecked(),
                 namespace: object.namespace(),
             },
             Event::Restarted(objects) => PrettyEvent::Restarted {

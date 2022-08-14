@@ -90,7 +90,16 @@ pub async fn run_to_completion<S: ResourceState>(
     let (name, namespace, api) = {
         let initial_manifest = manifest.latest();
         let namespace = initial_manifest.namespace();
-        let name = initial_manifest.name();
+        let name = match &initial_manifest.meta().name {
+            Some(name) => name.clone(),
+            None => {
+                error!(
+                    "Attempted to execute state machine for resource object without name {:?}",
+                    initial_manifest.meta()
+                );
+                return;
+            }
+        };
 
         let api: Api<S::Manifest> = match namespace {
             Some(ref namespace) => Api::namespaced(client.clone(), namespace),
