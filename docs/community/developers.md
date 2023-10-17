@@ -34,12 +34,13 @@ when building your application:
 
 ```toml
 [dependencies.k8s-openapi]
-version = "0.13"
+version = "0.21.1"
 default-features = false
-features = ["v1_22"]
+features = ["v1_24"]
 ```
 
-Krator is tested against Kubernetes v1.22.
+Krator is tested against Kubernetes v1.22. However after many updates that
+version feature flag was dropped from k8s-openapi.
 
 ### Building without openssl
 

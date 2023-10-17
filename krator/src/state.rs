@@ -90,7 +90,7 @@ pub async fn run_to_completion<S: ResourceState>(
     let (name, namespace, api) = {
         let initial_manifest = manifest.latest();
         let namespace = initial_manifest.namespace();
-        let name = initial_manifest.name();
+        let name = initial_manifest.name_any();
 
         let api: Api<S::Manifest> = match namespace {
             Some(ref namespace) => Api::namespaced(client.clone(), namespace),

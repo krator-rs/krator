@@ -1,4 +1,5 @@
 use k8s_openapi::api::admissionregistration::v1::MutatingWebhookConfiguration;
+#[cfg(feature = "admission-webhook")]
 use krator_derive::AdmissionWebhook;
 use kube::CustomResource;
 pub use schemars::JsonSchema;
@@ -7,7 +8,6 @@ use std::cmp::PartialEq;
 
 // TODO: follow up on https://github.com/clux/kube-rs/issues/264#issuecomment-748327959
 #[derive(
-    AdmissionWebhook,
     CustomResource,
     Serialize,
     Deserialize,
@@ -17,6 +17,9 @@ use std::cmp::PartialEq;
     Clone,
     JsonSchema,
 )]
+#[cfg(feature = "admission-webhook")]
+#[derive(AdmissionWebhook)]
+#[cfg(feature = "admission-webhook")]
 #[admission_webhook_features(secret, service, admission_webhook_config)]
 #[kube(group = "example.com", version = "v1", kind = "MyCr")]
 pub struct CrSpec {
@@ -56,6 +59,7 @@ fn it_has_a_function_for_creating_admission_webhook_service() {
 }
 
 #[test]
+#[cfg(feature = "admission-webhook")]
 fn it_has_a_function_for_creating_admission_webhook_configuration() {
     let service: k8s_openapi::api::core::v1::Service = MyCr::admission_webhook_service("default");
     let secret: k8s_openapi::api::core::v1::Secret = MyCr::admission_webhook_secret("default");

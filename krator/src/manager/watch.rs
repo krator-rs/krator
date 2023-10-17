@@ -1,8 +1,8 @@
 use kube::{
-    api::{DynamicObject, GroupVersionKind, ListParams},
+    api::{DynamicObject, GroupVersionKind},
     Resource,
 };
-use kube_runtime::watcher::Event;
+use kube_runtime::watcher::{Config, Event};
 
 /// Captures configuration needed to configure a watcher.
 #[derive(Clone, Debug)]
@@ -11,22 +11,22 @@ pub struct Watch {
     pub gvk: GroupVersionKind,
     /// Optionally restrict watching to namespace.
     pub namespace: Option<String>,
-    /// Restrict to objects matching list params (default watches everything).
-    pub list_params: ListParams,
+    /// Restrict to objects with `watcher::Config` (default watches everything).
+    pub config: Config,
 }
 
 impl Watch {
     pub fn new<
-        R: Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static,
+        R: Resource<DynamicType = (), Scope = kube::core::NamespaceResourceScope> + serde::de::DeserializeOwned + Clone + Send + 'static,
     >(
         namespace: Option<String>,
-        list_params: ListParams,
+        config: Config,
     ) -> Self {
         let gvk = GroupVersionKind::gvk(&R::group(&()), &R::version(&()), &R::kind(&()));
         Watch {
             gvk,
             namespace,
-            list_params,
+            config,
         }
     }
 

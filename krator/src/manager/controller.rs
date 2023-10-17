@@ -3,7 +3,7 @@ use super::watch::{Watch, WatchHandle};
 use crate::admission::WebhookFn;
 use crate::operator::Watchable;
 use crate::Operator;
-use kube::api::ListParams;
+use kube_runtime::watcher;
 
 /// Builder pattern for registering a controller or operator.
 pub struct ControllerBuilder<C: Operator> {
@@ -17,9 +17,9 @@ pub struct ControllerBuilder<C: Operator> {
     pub(crate) owns: Vec<Watch>,
     /// Restrict our controller to act on a specific namespace.
     namespace: Option<String>,
-    /// Restrict our controller to act on objects that match specific list
-    /// params.
-    list_params: ListParams,
+    /// Restrict our controller to act on objects that match specific
+    /// `watcher::Config`.
+    config: watcher::Config,
     /// The buffer length for Tokio channels used to communicate between
     /// watcher tasks and runtime tasks.
     buffer: usize,
@@ -33,7 +33,7 @@ impl<O: Operator> ControllerBuilder<O> {
             watches: vec![],
             owns: vec![],
             namespace: None,
-            list_params: Default::default(),
+            config: Default::default(),
             buffer: 32,
         }
     }
@@ -50,7 +50,7 @@ impl<O: Operator> ControllerBuilder<O> {
 
     /// Create watcher definition for the configured managed resource.
     pub(crate) fn manages(&self) -> Watch {
-        Watch::new::<O::Manifest>(self.namespace.clone(), self.list_params.clone())
+        Watch::new::<O::Manifest>(self.namespace.clone(), self.config.clone())
     }
 
     /// Restrict controller to manage a specific namespace.
@@ -59,15 +59,15 @@ impl<O: Operator> ControllerBuilder<O> {
         self
     }
 
-    /// Restrict controller to manage only objects matching specific list
-    /// params.
-    pub fn with_params(mut self, list_params: ListParams) -> Self {
-        self.list_params = list_params;
+    /// Restrict controller to manage only objects matching specific
+    /// `watcher::Config`.
+    pub fn with_config(mut self, config: watcher::Config) -> Self {
+        self.config = config;
         self
     }
 
-    /// Watch all objects of given kind R. Cluster scoped and no list param
-    /// restrictions.
+    /// Watch all objects of given kind R. Cluster scoped and no
+    /// `watcher::Config`.
     pub fn watches<R>(mut self) -> Self
     where
         R: Watchable,
@@ -77,17 +77,17 @@ impl<O: Operator> ControllerBuilder<O> {
     }
 
     /// Watch objects of given kind R. Cluster scoped, but limited to objects
-    /// matching supplied list params.
-    pub fn watches_with_params<R>(mut self, list_params: ListParams) -> Self
+    /// matching supplied watcher Config.
+    pub fn watches_with_params<R>(mut self, config: watcher::Config) -> Self
     where
         R: Watchable,
     {
-        self.watches.push(Watch::new::<R>(None, list_params));
+        self.watches.push(Watch::new::<R>(None, config));
         self
     }
 
-    /// Watch all objects of given kind R in supplied namespace, with no list
-    /// param restrictions.
+    /// Watch all objects of given kind R in supplied namespace, with no watcher
+    /// config restrictions.
     pub fn watches_namespaced<R>(mut self, namespace: &str) -> Self
     where
         R: Watchable,
@@ -100,22 +100,22 @@ impl<O: Operator> ControllerBuilder<O> {
     }
 
     /// Watch objects of given kind R in supplied namespace, and limited to
-    /// objects matching supplied list params.
+    /// objects matching supplied `watcher::Config`.
     pub fn watches_namespaced_with_params<R>(
         mut self,
         namespace: &str,
-        list_params: ListParams,
+        config: watcher::Config,
     ) -> Self
     where
         R: Watchable,
     {
         self.watches
-            .push(Watch::new::<R>(Some(namespace.to_string()), list_params));
+            .push(Watch::new::<R>(Some(namespace.to_string()), config));
         self
     }
 
     /// Watch and subscribe to notifications based on OwnerReferences all
-    /// objects of kind R. Cluster scoped and no list param restrictions.
+    /// objects of kind R. Cluster scoped and no watcher config restrictions.
     pub fn owns<R>(mut self) -> Self
     where
         R: Watchable,
@@ -126,17 +126,17 @@ impl<O: Operator> ControllerBuilder<O> {
 
     /// Watch and subscribe to notifications based on OwnerReferences
     /// objects of kind R. Cluster scoped, but limited to objects matching
-    /// supplied list params.
-    pub fn owns_with_params<R>(mut self, list_params: ListParams) -> Self
+    /// supplied `watcher::Config`.
+    pub fn owns_with_params<R>(mut self, config: watcher::Config) -> Self
     where
         R: Watchable,
     {
-        self.owns.push(Watch::new::<R>(None, list_params));
+        self.owns.push(Watch::new::<R>(None, config));
         self
     }
 
     /// Watch and subscribe to notifications based on OwnerReferences
-    /// objects of kind R in supplied namespace, with no list param
+    /// objects of kind R in supplied namespace, with no watcher config
     /// restrictions.
     pub fn owns_namespaced<R>(mut self, namespace: &str) -> Self
     where
@@ -151,17 +151,17 @@ impl<O: Operator> ControllerBuilder<O> {
 
     /// Watch and subscribe to notifications based on OwnerReferences
     /// objects of kind R in supplied namespace, and limited to objects
-    /// matching supplied list params.
+    /// matching supplied `watcher::Config`.
     pub fn owns_namespaced_with_params<R>(
         mut self,
         namespace: &str,
-        list_params: ListParams,
+        config: watcher::Config,
     ) -> Self
     where
         R: Watchable,
     {
         self.owns
-            .push(Watch::new::<R>(Some(namespace.to_string()), list_params));
+            .push(Watch::new::<R>(Some(namespace.to_string()), config));
         self
     }
 

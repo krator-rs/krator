@@ -11,12 +11,12 @@ use crate::admission::AdmissionTls;
 
 /// Trait alias for types which can be watched.
 pub trait Watchable:
-    Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
+    Resource<DynamicType = (), Scope = kube::core::NamespaceResourceScope> + serde::de::DeserializeOwned + Clone + Send + 'static
 {
 }
 
 impl<T> Watchable for T where
-    T: Resource<DynamicType = ()> + serde::de::DeserializeOwned + Clone + Send + 'static
+    T: Resource<DynamicType = (), Scope = kube::core::NamespaceResourceScope> + serde::de::DeserializeOwned + Clone + Send + 'static
 {
 }
 

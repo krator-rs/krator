@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::convert::TryFrom;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -9,7 +8,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info, trace, warn};
 
 use kube::{
-    api::{Api, ListParams, Resource, ResourceExt},
+    api::{Api, Resource, ResourceExt},
     Client,
 };
 use kube_runtime::watcher;
@@ -36,7 +35,7 @@ impl<R: Resource> From<&ObjectEvent<R>> for PrettyEvent {
     fn from(event: &ObjectEvent<R>) -> Self {
         match event {
             ObjectEvent::Applied(object) => PrettyEvent::Applied {
-                name: object.name(),
+                name: object.name_any(),
                 namespace: object.namespace(),
             },
             ObjectEvent::Deleted { name, namespace } => PrettyEvent::Deleted {
@@ -50,27 +49,27 @@ impl<R: Resource> From<&ObjectEvent<R>> for PrettyEvent {
 /// Accepts a type implementing the `Operator` trait and watches
 /// for resources of the associated `Manifest` type, running the
 /// associated state machine for each. Optionally filter by
-/// `kube::api::ListParams`.
+/// `kube_runtime::watcher::Config`.
 pub struct OperatorRuntime<O: Operator> {
     client: Client,
     handlers: HashMap<ObjectKey, Sender<ObjectEvent<O::Manifest>>>,
     operator: Arc<O>,
-    list_params: ListParams,
+    watcher_config: watcher::Config,
     signal: Option<Arc<AtomicBool>>,
     store: Store,
 }
 
 impl<O: Operator> OperatorRuntime<O> {
-    /// Create new runtime with optional ListParams.
-    pub fn new(kubeconfig: &kube::Config, operator: O, params: Option<ListParams>) -> Self {
+    /// Create new runtime with optional watcher::Config.
+    pub fn new(kubeconfig: &kube::Config, operator: O, watcher_config: Option<watcher::Config>) -> Self {
         let client = Client::try_from(kubeconfig.clone())
             .expect("Unable to create kube::Client from kubeconfig.");
-        let list_params = params.unwrap_or_default();
+        let watcher_config = watcher_config.unwrap_or_default();
         OperatorRuntime {
             client,
             handlers: HashMap::new(),
             operator: Arc::new(operator),
-            list_params,
+            watcher_config,
             signal: None,
             store: Store::new(),
         }
@@ -80,17 +79,17 @@ impl<O: Operator> OperatorRuntime<O> {
     pub(crate) fn new_with_store(
         kubeconfig: &kube::Config,
         operator: O,
-        params: Option<ListParams>,
+        watcher_config: Option<watcher::Config>,
         store: Store,
     ) -> Self {
         let client = Client::try_from(kubeconfig.clone())
             .expect("Unable to create kube::Client from kubeconfig.");
-        let list_params = params.unwrap_or_default();
+        let watcher_config = watcher_config.unwrap_or_default();
         OperatorRuntime {
             client,
             handlers: HashMap::new(),
             operator: Arc::new(operator),
-            list_params,
+            watcher_config,
             signal: None,
             store,
         }
@@ -116,7 +115,7 @@ impl<O: Operator> OperatorRuntime<O> {
                         match sender.send(ObjectEvent::Applied(object)).await {
                             Ok(_) => trace!("Successfully sent event to handler for object."),
                             Err(error) => error!(
-                                name=key.name(),
+                                name=key.name().to_string(),
                                 namespace=?key.namespace(),
                                 ?error,
                                 "Error while sending event. Will retry on next event.",
@@ -185,7 +184,7 @@ impl<O: Operator> OperatorRuntime<O> {
                 match event {
                     ObjectEvent::Applied(manifest) => {
                         trace!(
-                            name=%manifest.name(),
+                            name=%manifest.name_any(),
                             namespace=?manifest.namespace(),
                             "Resource applied.",
                         );
@@ -269,7 +268,7 @@ impl<O: Operator> OperatorRuntime<O> {
         // Now that we've sent off deletes, queue an apply event for all pods
         for object in objects.into_iter() {
             trace!(
-                name=%object.name(),
+                name=%object.name_any(),
                 namespace=?object.namespace(),
                 "object_applied"
             );
@@ -324,7 +323,7 @@ impl<O: Operator> OperatorRuntime<O> {
     /// Listens for updates to objects and forwards them to queue.
     pub async fn main_loop(&mut self) {
         let api = Api::<O::Manifest>::all(self.client.clone());
-        let mut informer = watcher(api, self.list_params.clone()).boxed();
+        let mut informer = watcher(api, self.watcher_config.clone()).boxed();
         loop {
             match informer.try_next().await {
                 Ok(Some(event)) => self.handle_event(event).await,
@@ -382,14 +381,14 @@ async fn run_object_task<O: Operator>(
             Err(e) => {
                 error!(
                     "Operator registration hook for object {} in namespace {:?} failed: {:?}",
-                    m.name(),
+                    m.name_any(),
                     m.namespace(),
                     e
                 );
                 return;
             }
         }
-        (m.namespace(), m.name())
+        (m.namespace(), m.name_any())
     };
 
     tokio::select! {
@@ -439,7 +438,7 @@ async fn run_object_task<O: Operator>(
         }
         Err(e) => match e {
             // Ignore not found, already deleted. This could happen if resource was force deleted.
-            kube::error::Error::Api(kube::error::ErrorResponse { code, .. }) if code == 404 => {
+            kube::error::Error::Api(kube::error::ErrorResponse { code: 404, .. }) => {
                 debug!(?namespace, %name, "Object already deleted")
             }
             error => {

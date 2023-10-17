@@ -37,7 +37,7 @@ pub(crate) async fn launch_watcher(client: kube::Client, handle: WatchHandle) {
         ),
         None => kube::Api::all_with(client, &ApiResource::from_gvk(&handle.watch.gvk)),
     };
-    let mut watcher = kube_runtime::watcher(api, handle.watch.list_params).boxed();
+    let mut watcher = kube_runtime::watcher(api, handle.watch.config).boxed();
     loop {
         match watcher.try_next().await {
             Ok(Some(event)) => {

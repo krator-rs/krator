@@ -43,11 +43,11 @@ impl<R: Resource> From<&Event<R>> for PrettyEvent {
     fn from(event: &Event<R>) -> Self {
         match event {
             Event::Applied(object) => PrettyEvent::Applied {
-                name: object.name(),
+                name: object.name_any(),
                 namespace: object.namespace(),
             },
             Event::Deleted(object) => PrettyEvent::Deleted {
-                name: object.name(),
+                name: object.name_any(),
                 namespace: object.namespace(),
             },
             Event::Restarted(objects) => PrettyEvent::Restarted {
@@ -83,7 +83,7 @@ where
     R: DeserializeOwned,
 {
     // TODO: This sucks
-    let value = serde_json::to_value(&dynamic_object)?;
+    let value = serde_json::to_value(dynamic_object)?;
     Ok(serde_json::from_value::<R>(value)?)
 }
 
